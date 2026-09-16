@@ -36,6 +36,7 @@
 
   /* ============ jouer un coup ============ */
   App.tryMove = function (fromI, toI, promo) {
+    if (S.review) return App.reviewMove(fromI, toI, promo);
     var legal = S.game.legalMoves(App.sqName(fromI));
     var isPromo = legal.some(function (m) { return m.to === toI && (m.flags & Chess.FLAGS.PROMO); });
     if (isPromo && !promo) {
@@ -104,6 +105,7 @@
     S.lastMove = h.length ? { from: h[h.length - 1].from, to: h[h.length - 1].to } : null;
     S.premove = null;
     S.viewGame = null; S.viewPly = null;
+    S.varBase = null; S.varMoves = []; S.varPly = 0;
     App.hideConfirm();
     App.closePromo();
     App.deselect();
@@ -118,19 +120,35 @@
   };
 
   /* ============ navigation dans les coups ============ */
+  /* reconstruit la position affichée : ligne principale + variante éventuelle */
+  App.buildViewGame = function () {
+    var g = new Chess(S.game._startFen || undefined);
+    var n = S.viewPly == null ? S.game.history.length : S.viewPly;
+    var hist = S.game.history;
+    for (var i = 0; i < n && i < hist.length; i++) {
+      var h = hist[i];
+      g.move({ from: h.from, to: h.to, promotion: h.promotion });
+    }
+    if (S.varBase != null) {
+      for (var j = 0; j < S.varPly; j++) {
+        var v = S.varMoves[j];
+        g.move({ from: v.from, to: v.to, promotion: v.promotion });
+      }
+    }
+    return g;
+  };
+
   App.viewPly = function (n) {
     if (!S.game) return;
     var len = S.game.history.length;
+    /* quitter la variante : la navigation se fait sur la ligne principale */
+    S.varBase = null; S.varMoves = []; S.varPly = 0;
     if (n == null || n >= len) {
       S.viewGame = null; S.viewPly = null;
     } else {
       if (n < 0) n = 0;
-      var g = new Chess(S.game._startFen || undefined);
-      for (var i = 0; i < n; i++) {
-        var h = S.game.history[i];
-        g.move({ from: h.from, to: h.to, promotion: h.promotion });
-      }
-      S.viewGame = g; S.viewPly = n;
+      S.viewPly = n;
+      S.viewGame = App.buildViewGame();
     }
     S.premove = null;
     App.hideConfirm();
@@ -142,12 +160,36 @@
     App.updateEval();
   };
 
+  /* avancer/reculer dans la variante en cours */
+  App.varStep = function (d) {
+    if (S.varBase == null) return;
+    S.varPly = Math.max(0, Math.min(S.varMoves.length, S.varPly + d));
+    S.viewGame = App.buildViewGame();
+    App.hideConfirm();
+    App.closePromo();
+    S.selected = -1; S.legalFrom = [];
+    App.renderPieces();
+    App.renderMoves();
+    App.renderHighlights();
+    App.updateEval();
+  };
+
+  /* navigation unifiée : traverse la variante si active, sinon la ligne principale */
+  App.stepBack = function () {
+    if (S.varBase != null && S.varPly > 0) App.varStep(-1);
+    else App.viewPly(S.viewPly == null ? S.game.history.length - 1 : S.viewPly - 1);
+  };
+  App.stepFwd = function () {
+    if (S.varBase != null && S.varPly < S.varMoves.length) App.varStep(1);
+    else if (S.viewPly != null) App.viewPly(S.viewPly + 1);
+  };
+
   /* ============ barre d'évaluation ============ */
   App.updateEval = function () {
     var g = App.displayGame();
     if (!g) return;
     var wcp;
-    if (S.review && S.review.evalsW) {
+    if (S.review && S.review.evalsW && S.varBase == null) {
       var ply = S.viewPly == null ? S.game.history.length : S.viewPly;
       wcp = ply === 0 ? S.review.ev0W : S.review.evalsW[ply - 1];
     } else {
@@ -293,6 +335,7 @@
     S.premove = null;
     S.pendingConfirm = null;
     S.viewGame = null; S.viewPly = null;
+    S.varBase = null; S.varMoves = []; S.varPly = 0;
     S.review = null;
     App.hideConfirm();
 
@@ -323,6 +366,7 @@
     App.botThink(false);
     S.premove = null;
     S.viewGame = null; S.viewPly = null;
+    S.varBase = null; S.varMoves = []; S.varPly = 0;
     S.review = null;
     if (App.stopAnalysis) App.stopAnalysis();
     App.hideConfirm();

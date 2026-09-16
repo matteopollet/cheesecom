@@ -293,7 +293,7 @@
 
   App.select = function (i) {
     S.selected = i;
-    S.legalFrom = S.game.legalMoves(App.sqName(i));
+    S.legalFrom = App.displayGame().legalMoves(App.sqName(i));
     Sound.select();
     App.renderHighlights();
   };
@@ -305,7 +305,7 @@
     var board = App.$('#board');
     var cell = board.clientWidth / 8;
     var p = App.displayXY(toI);
-    var color = S.game.board[fromI].color;
+    var color = App.displayGame().board[fromI].color;
     picker.innerHTML = '';
     ['q', 'r', 'b', 'n'].forEach(function (t) {
       var b = document.createElement('button');
@@ -359,6 +359,11 @@
       S.game.turn === S.playerColor;
   };
 
+  /* mode bilan : on peut jouer les coups du camp au trait (variante) */
+  App.isReviewTurn = function () {
+    return !!(S.review && S.review.plies && S.game);
+  };
+
   /* tour adverse : on peut préparer un premove */
   App.isPremoveTurn = function () {
     return S.active && !S.viewGame && S.game.turn !== S.playerColor;
@@ -374,7 +379,8 @@
       return;
     }
     if (e.button !== 0) return;
-    if (S.viewGame) return; /* navigation : pas d'interaction */
+    var reviewTurn = App.isReviewTurn();
+    if (S.viewGame && !reviewTurn) return; /* navigation : pas d'interaction */
     App.closePromo();
     App.hideConfirm();
     App.clearMarks();
@@ -385,16 +391,20 @@
     var p = pieceAt(i);
 
     /* destination d'un coup déjà sélectionné */
-    if (App.isUserTurn() && S.selected >= 0 &&
+    if ((App.isUserTurn() || reviewTurn) && S.selected >= 0 &&
         S.legalFrom.some(function (m) { return m.to === i; })) {
       var ok = App.tryMove(S.selected, i);
       if (ok !== true && ok !== 'pending') Sound.illegal();
       return;
     }
 
-    if ((App.isUserTurn() || App.isPremoveTurn()) && p && p.color === S.playerColor) {
+    var canPick = reviewTurn
+      ? (p && p.color === App.displayGame().turn)
+      : ((App.isUserTurn() || App.isPremoveTurn()) && p && p.color === S.playerColor);
+    if (canPick) {
       S.selected = i;
-      S.legalFrom = App.isUserTurn() ? S.game.legalMoves(App.sqName(i)) : [];
+      S.legalFrom = reviewTurn ? App.displayGame().legalMoves(App.sqName(i))
+        : (App.isUserTurn() ? S.game.legalMoves(App.sqName(i)) : []);
       Sound.select();
       App.renderHighlights();
       var el = S.pieceEls[i];

@@ -140,9 +140,9 @@
     window.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') { App.deselect(); App.closePromo(); App.hideConfirm(); }
       else if (e.key === 'ArrowLeft' && S.game) {
-        App.viewPly(S.viewPly == null ? S.game.history.length - 1 : S.viewPly - 1);
+        App.stepBack();
       } else if (e.key === 'ArrowRight' && S.game) {
-        App.viewPly(S.viewPly == null ? S.game.history.length : S.viewPly + 1);
+        App.stepFwd();
       } else if (e.key === 'Home' && S.game) {
         App.viewPly(0);
       } else if (e.key === 'End' && S.game) {

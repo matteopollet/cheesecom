@@ -9,6 +9,7 @@
 
   var S = App.state;
   var $ = App.$;
+  var Sound = App.Sound;
   var escapeHtml = App.escapeHtml;
 
   /* classes de coups : libellé, symbole, couleur (style chess.com) */
@@ -481,6 +482,42 @@
     return (idx >= 0 && idx < S.review.plies.length) ? idx : null;
   };
 
+  /* jouer un coup en mode bilan -> variante */
+  App.reviewMove = function (fromI, toI, promo) {
+    var g = App.buildViewGame();
+    var legal = g.legalMoves(App.sqName(fromI));
+    var isPromo = legal.some(function (m) {
+      return m.to === toI && (m.flags & Chess.FLAGS.PROMO);
+    });
+    if (isPromo && !promo) {
+      if (S.prefs.autoQueen) promo = 'q';
+      else { App.openPromo(fromI, toI); return true; }
+    }
+    var mv = g.move({ from: App.sqName(fromI), to: App.sqName(toI), promotion: promo });
+    if (!mv) { Sound.illegal(); return false; }
+
+    if (S.varBase == null) {
+      S.varBase = S.viewPly == null ? S.game.history.length : S.viewPly;
+      S.varMoves = []; S.varPly = 0;
+    } else {
+      S.varMoves = S.varMoves.slice(0, S.varPly); /* tronque si milieu de variante */
+    }
+    S.varMoves.push(mv); S.varPly++;
+    S.viewGame = g;
+
+    App.deselect();
+    App.applyMoveUI(mv);
+    App.renderHighlights();
+    App.renderMoves();
+    App.updateEval();
+
+    if (mv.flags & (Chess.FLAGS.CAPTURE | Chess.FLAGS.EP)) Sound.capture();
+    else if (mv.flags & (Chess.FLAGS.KSIDE | Chess.FLAGS.QSIDE)) Sound.castle();
+    else Sound.move();
+    if (mv.san.indexOf('+') >= 0) setTimeout(function () { Sound.check(); }, 140);
+    return true;
+  };
+
   /* appelé depuis renderMoves à chaque navigation */
   App.reviewInfo = function (plyIdx) {
     var rev = S.review;
@@ -489,6 +526,17 @@
     if (!el) return;
     explainOpen = false;
     $('#an-explain-box').classList.add('hidden');
+
+    /* variante en cours : la bulle affiche la ligne explorée */
+    if (S.varBase != null) {
+      var vs = S.varMoves.slice(0, S.varPly).map(function (m) { return m.san; });
+      el.innerHTML =
+        '<i class="cls-badge" style="background:#5f97c4">↳</i> ' +
+        'Variante : ' + escapeHtml(vs.join(' ') || '…') +
+        '<span class="an-ev">clique sur un coup pour revenir</span>';
+      App.drawAnGraphs();
+      return;
+    }
 
     if (plyIdx == null || plyIdx < 0) {
       el.textContent = 'Position initiale.';
@@ -584,8 +632,8 @@
       return S.viewPly == null ? (S.game ? S.game.history.length : 0) : S.viewPly;
     };
     $('#an-first').onclick = function () { stopAutoplay(); App.viewPly(0); };
-    $('#an-prev').onclick = function () { stopAutoplay(); App.viewPly(cur() - 1); };
-    $('#an-next').onclick = function () { stopAutoplay(); App.viewPly(cur() + 1); };
+    $('#an-prev').onclick = function () { stopAutoplay(); App.stepBack(); };
+    $('#an-next').onclick = function () { stopAutoplay(); App.stepFwd(); };
     $('#an-last').onclick = function () { stopAutoplay(); App.viewPly(null); };
     $('#an-play').onclick = toggleAutoplay;
     $('#an-tosum').onclick = function () { stopAutoplay(); showView('sum'); };

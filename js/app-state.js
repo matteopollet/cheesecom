@@ -36,6 +36,9 @@
       viewGame: null,         /* partie reconstruite pour la navigation */
       viewPly: null,          /* nb de plies rejouées (null = position live) */
       review: null,           /* mode analyse : {white, black, result, plies, evalsW, accuracy} */
+      varBase: null,          /* variante : ply de la ligne principale où elle commence */
+      varMoves: [],           /* coups joués dans la variante */
+      varPly: 0,              /* coups de la variante actuellement rejoués */
       prefs: null
     },
     selectedBot: null,      /* défini dans app.js au démarrage */
