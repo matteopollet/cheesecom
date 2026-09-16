@@ -79,7 +79,7 @@
       white: { name: wName, rating: wElo },
       black: { name: bName, rating: bElo },
       result: $('#overlay-result').textContent || '*'
-    });
+    }, undefined);
   };
 
   App.runPgnAnalysis = function () {
@@ -92,11 +92,11 @@
       white: { name: h.White || 'Blancs', rating: h.WhiteElo || '' },
       black: { name: h.Black || 'Noirs', rating: h.BlackElo || '' },
       result: parsed.result
-    });
+    }, parsed.startFen);
   };
 
   /* ---------- cœur ---------- */
-  function startAnalysis(game, moves, meta) {
+  function startAnalysis(game, moves, meta, startFen) {
     if (analyzing) { App.toast('Analyse déjà en cours…'); return; }
 
     /* positionne le plateau sur la partie importée */
@@ -124,13 +124,13 @@
     $('#an-input').classList.add('hidden');
     $('#an-results').classList.remove('hidden');
     $('#an-summary').innerHTML = '';
-    $('#an-moves').innerHTML = '';
+    $('#moves-list-an').innerHTML = '';
     showProgress(0, 1);
 
     var payload = moves || game.history.map(function (h) {
       return { from: h.from, to: h.to, promotion: h.promotion };
     });
-    var fen = game.history.length ? rebuildStartFen(game) : game.fen();
+    var fen = startFen || Chess.START_FEN;
 
     analyzing = true;
     $('#an-run').disabled = true;
@@ -156,13 +156,6 @@
         } catch (err) { failAnalysis(String(err)); }
       }, 50);
     }
-  }
-
-  /* retrouve le FEN initial en annulant tous les coups */
-  function rebuildStartFen(game) {
-    var g = new Chess(game.fen());
-    while (g.history.length) g.undo();
-    return g.fen();
   }
 
   function mkPlayer(p) {
