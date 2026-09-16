@@ -1,0 +1,8 @@
+{
+  "name": "cheesecom",
+  "version": "1.0.0",
+  "description": "Clone local de chess.com — jouez contre des robots",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
