@@ -459,8 +459,26 @@
     g.bots.forEach(function (b) { b.avatar = avatarSVG(b, 80); });
   });
 
+  /* ---------- répliques des bots ---------- */
+  var LINES = {
+    start: ["Bonne chance !", "C'est parti !", "Prêt ? On y va.", "Montre-moi ce que tu sais faire.", "Amuse-toi bien !"],
+    botCapture: ["Je prends ça !", "Miam.", "Merci !", "Une pièce de plus.", "Hop, à moi."],
+    userCapture: ["Aïe !", "Bien joué...", "Je l'avais pas vu.", "Tu me la rends ?"],
+    botCheck: ["Échec !", "Attention à ton roi !", "Échec, ça commence."],
+    userCheck: ["Oups.", "Pas mal !", "Je m'en sors."],
+    win: ["Belle partie ! GG.", "Victoire ! Rejouons ?", "Bien essayé !"],
+    lose: ["Bravo, bien joué !", "Tu m'as eu. Revanche ?", "Impressionnant !"],
+    drawOk: ["D'accord, nulle.", "Oui, partageons le point.", "Accepté, belle partie."],
+    drawNo: ["Non merci, je continue !", "Pas encore, la position m'intéresse.", "Je préfère jouer."],
+    resign: ["Merci pour la partie !", "À la prochaine !"],
+    think: ["Hmm...", "Intéressant...", "Voyons voir...", "Pas évident..."],
+    flag: ["Le temps, c'est de l'argent.", "Trop lent !"]
+  };
+
   var api = {
     GROUPS: GROUPS,
+    LINES: LINES,
+    line: function (k) { var a = LINES[k]; return a[Math.floor(Math.random() * a.length)]; },
     avatarSVG: avatarSVG,
     flagSVG: flagSVG,
     findBot: function (id) {

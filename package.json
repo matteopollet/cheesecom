@@ -1,8 +1,10 @@
 {
   "name": "cheesecom",
   "version": "1.0.0",
-  "description": "Clone local de chess.com — jouez contre des robots",
+  "description": "Clone local de chess.com — jouez aux échecs contre des robots (projet pédagogique)",
+  "license": "GPL-3.0-only",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node test/perft.js"
   }
 }
