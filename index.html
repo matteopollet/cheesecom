@@ -113,14 +113,24 @@
           </div>
           <div class="board-overlay hidden" id="board-overlay">
             <div class="overlay-card">
-              <div class="overlay-result" id="overlay-result">1-0</div>
+              <button class="oc-x" id="overlay-close" title="Fermer">×</button>
               <div class="overlay-title" id="overlay-title">Victoire !</div>
               <div class="overlay-sub" id="overlay-sub">par échec et mat</div>
-              <div class="overlay-btns">
-                <button class="btn green" id="btn-rematch">Revanche</button>
-                <button class="btn ghost" id="btn-analyze">Analyser</button>
-                <button class="btn ghost" id="btn-newbot">Choisir un bot</button>
+              <div class="oc-coach">
+                <span class="oc-ava" id="oc-ava"></span>
+                <span class="oc-bubble" id="oc-bubble">Chargement du bilan de votre partie…</span>
               </div>
+              <div class="oc-icons">
+                <i class="cls-badge" style="background:#96bc4b">✓</i>
+                <i class="cls-badge" style="background:#e6912c">!!</i>
+                <i class="cls-badge" style="background:#f7c631">?</i>
+              </div>
+              <button class="btn green big" id="btn-analyze">Bilan</button>
+              <div class="overlay-btns">
+                <button class="btn ghost" id="btn-newbot">Nouveau robot</button>
+                <button class="btn ghost" id="btn-rematch">Revanche</button>
+              </div>
+              <span id="overlay-result" hidden>1-0</span>
             </div>
           </div>
         </div>
@@ -293,13 +303,14 @@
     <!-- vue analyse de partie -->
     <div id="panel-analysis" class="hidden">
       <div class="panel-header">
-        <svg class="ph-icon" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.2-2.6 5.7-.9 1-1.4 1.7-1.4 2.8V18h-6v-.5c0-1.1-.5-1.9-1.4-2.8C6.2 13.2 5 11.4 5 9a7 7 0 0 1 7-7zM9 20h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z" fill="#f5c542"/></svg>
-        <span class="ph-title">Analyse de partie</span>
+        <svg class="ph-icon" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.2-2.6 5.7-.9 1-1.4 1.7-1.4 2.8V18h-6v-.5c0-1.1-.5-1.9-1.4-2.8C6.2 13.2 5 11.4 5 9a7 7 0 0 1 7-7zM9 20h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z" fill="#96bc4b"/></svg>
+        <span class="ph-title">Bilan</span>
         <button class="ph-sound" id="an-back" title="Retour">
           <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor"/></svg>
         </button>
       </div>
 
+      <!-- import PGN -->
       <div id="an-input">
         <p class="an-hint">Colle le PGN d'une partie (chess.com → Partie terminée → « Télécharger » / copier le PGN) ou importe le fichier <b>.pgn</b> / <b>.txt</b>.</p>
         <textarea id="an-pgn" spellcheck="false" placeholder='[Event "Live Chess"]&#10;[Site "Chess.com"]&#10;…&#10;&#10;1. e4 e5 2. Nf3 Nc6 …'></textarea>
@@ -310,27 +321,55 @@
         </div>
       </div>
 
+      <!-- bilan récapitulatif -->
       <div id="an-results" class="hidden">
         <div class="an-progress" id="an-progress">
           <div class="an-progress-track"><div class="an-progress-fill" id="an-progress-fill"></div></div>
           <span id="an-progress-txt">Analyse…</span>
         </div>
-        <div id="an-summary"></div>
-        <div id="an-info" class="an-info"></div>
+        <div id="an-summary" class="an-scroll"></div>
+      </div>
+
+      <!-- bilan coup par coup -->
+      <div id="an-review" class="hidden">
+        <div class="an-coach">
+          <span class="an-coach-ava" id="an-coach-ava2"></span>
+          <div class="an-coach-bubble" id="an-rev-msg"></div>
+        </div>
+        <div class="an-review-btns">
+          <button class="btn ghost" id="an-explain">
+            <svg viewBox="0 0 24 24"><path d="M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9zm3-19a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2z" fill="currentColor"/></svg>
+            Expliquer
+          </button>
+          <button class="btn green" id="an-next2">Suivant →</button>
+        </div>
+        <div class="an-explain hidden" id="an-explain-box"></div>
         <div class="moves-wrap">
-          <div class="moves-head"><span>Coups</span></div>
+          <div class="moves-head"><span id="an-opening">Coups</span></div>
           <div class="moves-list" id="moves-list-an"></div>
         </div>
+        <canvas id="an-graph" class="an-graph"></canvas>
         <div class="an-nav">
+          <button class="an-nav-btn" id="an-tosum" title="Retour au bilan">☰</button>
           <button class="an-nav-btn" id="an-first" title="Début">«</button>
           <button class="an-nav-btn" id="an-prev" title="Précédent">‹</button>
+          <button class="an-nav-btn" id="an-play" title="Lecture auto">▶</button>
           <button class="an-nav-btn" id="an-next" title="Suivant">›</button>
           <button class="an-nav-btn" id="an-last" title="Fin">»</button>
         </div>
-        <button class="btn ghost an-new" id="an-new">Analyser une autre partie</button>
       </div>
     </div>
   </aside>
+</div>
+
+<div class="confirm-modal hidden" id="resign-modal">
+  <div class="cm-card">
+    <div class="cm-text">Voulez-vous vraiment abandonner ?</div>
+    <div class="cm-btns">
+      <button class="btn ghost" id="resign-cancel">Annuler</button>
+      <button class="btn danger" id="resign-ok">Abandonner</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>

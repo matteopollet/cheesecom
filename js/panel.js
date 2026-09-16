@@ -87,12 +87,15 @@
         if (S.viewPly != null && ply === S.viewPly - 1) s.classList.add('viewed');
         else if (S.viewPly == null && ply === hist.length - 1) s.classList.add('latest');
         if (m) {
+          var pcIcon = m.piece !== 'p'
+            ? '<img class="mv-pc" src="' + App.PIECE_URL[m.color + m.piece.toUpperCase()] + '" alt="">'
+            : '';
           if (plies && plies[ply]) {
             var cl = App.CLASSES[plies[ply].cls];
-            s.innerHTML = '<i class="cls-badge" style="background:' + cl.color + '">' + cl.icon + '</i>' + escapeHtml(m.san);
+            s.innerHTML = pcIcon + '<i class="cls-badge" style="background:' + cl.color + '">' + cl.icon + '</i>' + escapeHtml(m.san);
             s.title = cl.label + (plies[ply].bestSan !== m.san ? ' — meilleur : ' + plies[ply].bestSan : '');
           } else {
-            s.textContent = m.san;
+            s.innerHTML = pcIcon + escapeHtml(m.san);
           }
           s.dataset.ply = ply;
           s.onclick = function () { App.viewPly(ply + 1); };

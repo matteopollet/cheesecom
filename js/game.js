@@ -256,10 +256,15 @@
     App.botThink(false);
     App.renderClocks();
 
-    var titles = { win: 'Victoire !', lose: 'Défaite', draw: 'Partie nulle' };
+    var title;
+    if (outcome === 'draw') title = 'Partie nulle';
+    else {
+      var wColor = result === '1-0' ? 'w' : 'b';
+      var winnerName = wColor === S.playerColor ? App.USER.name : S.bot.name;
+      title = winnerName + ' a gagné';
+    }
     $('#overlay-result').textContent = result;
-    $('#overlay-result').style.color = outcome === 'win' ? 'var(--yellow)' : outcome === 'lose' ? '#e8e6e3' : 'var(--muted)';
-    $('#overlay-title').textContent = titles[outcome];
+    $('#overlay-title').textContent = title;
     $('#overlay-sub').textContent = reason;
     $('#board-overlay').classList.remove('hidden');
 
@@ -371,6 +376,12 @@
 
   /* ============ actions joueur ============ */
   App.resign = function () {
+    if (!S.active) return;
+    $('#resign-modal').classList.remove('hidden');
+  };
+
+  App.confirmResign = function () {
+    $('#resign-modal').classList.add('hidden');
     if (!S.active) return;
     var res = S.playerColor === 'w' ? '0-1' : '1-0';
     App.botSay(line('resign'));

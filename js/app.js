@@ -118,6 +118,9 @@
     $('#cfm-no').onclick = function (e) { e.stopPropagation(); App.cancelConfirm(); };
     $('#btn-rematch').onclick = App.startGame;
     $('#btn-newbot').onclick = App.backToSelect;
+    $('#overlay-close').onclick = function () { $('#board-overlay').classList.add('hidden'); };
+    $('#resign-ok').onclick = App.confirmResign;
+    $('#resign-cancel').onclick = function () { $('#resign-modal').classList.add('hidden'); };
     $('#btn-flip').onclick = function () {
       S.flipped = !S.flipped;
       App.buildSquares();

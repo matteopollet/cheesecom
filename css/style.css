@@ -371,7 +371,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* le panneau d'analyse remplit la hauteur : liste scrollable, nav en bas */
 #an-results { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-#an-results .moves-wrap { min-height: 0; }
+#an-review .moves-wrap { flex: 1; min-height: 0; }
 .an-nav { flex: 0 0 auto; }
 
 .panel-header {
@@ -824,3 +824,138 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   transition: background .1s;
 }
 .an-nav-btn:hover { background: var(--card-hover); }
+
+/* ============ fin de partie façon chess.com ============ */
+.overlay-card { position: relative; min-width: 300px; padding: 22px 26px; }
+.oc-x {
+  position: absolute; top: 8px; right: 10px;
+  background: none; border: 0; color: var(--muted);
+  font-size: 22px; cursor: pointer; line-height: 1;
+}
+.oc-x:hover { color: var(--text); }
+.overlay-title { font-size: 21px; font-weight: 800; margin-top: 0; }
+.overlay-sub { color: var(--muted); margin-top: 2px; font-size: 13.5px; }
+.oc-coach {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin: 16px 0 12px; text-align: left;
+}
+.oc-ava { width: 38px; height: 38px; flex: none; display: inline-block; }
+.oc-ava svg { width: 100%; height: 100%; }
+.oc-bubble {
+  background: #3d3a36; border-radius: 10px;
+  padding: 9px 12px; font-size: 13px; font-weight: 600;
+  color: var(--text); line-height: 1.4; flex: 1;
+}
+.oc-icons {
+  display: flex; justify-content: center; gap: 10px; margin: 4px 0 14px;
+}
+.oc-icons .cls-badge { width: 22px; height: 22px; font-size: 12px; margin: 0; border-radius: 50%; }
+.btn.big {
+  width: 100%; padding: 13px; font-size: 16px; font-weight: 800;
+  border: 0; border-radius: 8px; cursor: pointer;
+}
+.btn.danger { background: #c2453a; color: #fff; }
+.btn.danger:hover { background: #d05247; }
+.overlay-btns { margin-top: 10px; }
+.overlay-btns .btn { flex: 1; padding: 10px; }
+
+/* ============ modale de confirmation (abandon) ============ */
+.confirm-modal {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(15, 14, 12, .6);
+}
+.cm-card {
+  background: #2c2a26; border: 1px solid #454139;
+  border-radius: 10px; padding: 20px 22px;
+  min-width: 300px; box-shadow: 0 14px 44px rgba(0,0,0,.6);
+}
+.cm-text { font-size: 15px; font-weight: 700; margin-bottom: 16px; text-align: center; }
+.cm-btns { display: flex; gap: 10px; }
+.cm-btns .btn { flex: 1; padding: 10px; border-radius: 8px; }
+
+/* ============ bilan chess.com ============ */
+.an-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+.an-scroll::-webkit-scrollbar { width: 8px; }
+.an-scroll::-webkit-scrollbar-thumb { background: #45413b; border-radius: 4px; }
+
+.an-coach {
+  display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px;
+}
+.an-coach-ava {
+  width: 44px; height: 44px; flex: none;
+  border-radius: 8px; overflow: hidden; background: #3d3a36;
+  display: inline-block;
+}
+.an-coach-ava svg { width: 100%; height: 100%; }
+.an-coach-bubble {
+  background: #3d3a36; border-radius: 10px;
+  padding: 10px 12px; font-size: 13px; font-weight: 600;
+  line-height: 1.45; flex: 1;
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+}
+.an-coach-bubble .cls-badge { flex: none; }
+.an-ev {
+  margin-left: auto; font-size: 12px; font-weight: 800;
+  color: var(--muted); background: #2c2a26;
+  border-radius: 5px; padding: 2px 7px;
+}
+
+.an-graph {
+  width: 100%; height: 64px; display: block;
+  border-radius: 6px; margin-bottom: 12px;
+  cursor: pointer; background: #26241f;
+}
+
+.an-trow {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 0; font-size: 13.5px;
+}
+.an-tlabel { flex: 1; font-weight: 700; color: var(--muted); }
+.an-tp {
+  width: 78px; display: flex; flex-direction: column; align-items: center;
+  gap: 3px; font-size: 12px; font-weight: 700; text-align: center;
+}
+.an-tp-ava { width: 34px; height: 34px; border-radius: 6px; overflow: hidden; background: #3d3a36; }
+.an-tp-ava svg { width: 100%; height: 100%; }
+.an-tval {
+  width: 78px; text-align: center;
+  background: #f5f5f5; color: #26241f;
+  border-radius: 6px; padding: 4px 0; font-size: 15px;
+}
+
+.an-grid {
+  display: grid; grid-template-columns: 1fr 44px 44px;
+  row-gap: 7px; align-items: center;
+  padding: 8px 0; font-size: 13.5px;
+  border-top: 1px solid #3a3733;
+  border-bottom: 1px solid #3a3733;
+}
+.an-cnt { text-align: center; font-weight: 700; }
+.an-cls { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.an-cls .cls-badge { width: 19px; height: 19px; font-size: 11px; border-radius: 50%; margin: 0; }
+
+.an-phases {
+  display: grid; grid-template-columns: 1fr 44px 44px;
+  row-gap: 7px; align-items: center;
+  padding: 8px 0 12px; font-size: 13.5px;
+}
+
+#an-results .btn.big, #an-results .btn.ghost { width: 100%; margin-top: 8px; }
+
+/* review coup par coup */
+#an-review { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+#an-review.hidden { display: none !important; }
+.an-review-btns { display: flex; gap: 8px; margin-bottom: 10px; }
+.an-review-btns .btn { flex: 1; padding: 10px; font-size: 14px; }
+.an-review-btns .btn.ghost { display: flex; align-items: center; justify-content: center; gap: 7px; }
+.an-review-btns svg { width: 16px; height: 16px; }
+.an-explain {
+  background: #2c2a26; border-radius: 8px;
+  padding: 10px 12px; font-size: 13px; margin-bottom: 10px;
+}
+.an-xrow { display: flex; align-items: center; gap: 7px; padding: 3px 0; }
+
+/* icônes de pièces dans la liste des coups */
+.mv-pc { width: 15px; height: 15px; margin-right: 2px; vertical-align: -2px; }
+.mv { display: inline-flex; align-items: center; }
