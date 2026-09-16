@@ -225,6 +225,32 @@
     return out;
   }
 
+  /**
+   * Note tous les coups légaux à la profondeur donnée (sans bruit).
+   * Retourne [{ m, s }] trié par score décroissant (point de vue du trait).
+   */
+  function scoreMoves(game, depth, limit) {
+    nodeLimit = limit || 120000;
+    nodeCount = 0;
+    var scored = [];
+    var ordered = orderMoves(game, game.legalMoves());
+    for (var i = 0; i < ordered.length; i++) {
+      var m = ordered[i];
+      game._make(m);
+      var s;
+      if (game.legalMoves().length === 0) {
+        s = game.inCheck(game.turn) ? MATE + 10 : 0;
+      } else {
+        s = -search(game, depth - 1, -Infinity, Infinity, 0);
+      }
+      game._unmake();
+      scored.push({ m: m, s: s });
+      if (nodeCount > nodeLimit) break;
+    }
+    scored.sort(function (a, b) { return b.s - a.s; });
+    return scored;
+  }
+
   /* durée de "réflexion" simulée selon le niveau */
   function thinkTime(rating) {
     var base = rating < 600 ? 250 + Math.random() * 700
@@ -233,7 +259,141 @@
     return base;
   }
 
-  var api = { pickMove: pickMove, evaluate: evaluate, thinkTime: thinkTime, paramsFor: paramsFor };
+  /* ============ analyse de partie (style chess.com) ============ */
+
+  /* SAN complet (+/# compris) d'un coup légal */
+  function sanOf(game, m, legal) {
+    var san = game._san(m, legal);
+    game._make(m);
+    if (game.inCheck(game.turn)) san += game.legalMoves().length === 0 ? '#' : '+';
+    game._unmake();
+    return san;
+  }
+
+  /* coup "évident" : recapture rentable ou roque -> jamais brillant */
+  function isTrivial(m) {
+    if (m.flags & (Chess.FLAGS.KSIDE | Chess.FLAGS.QSIDE)) return true;
+    if (m.captured && VALUES[m.captured] >= VALUES[m.piece]) return true;
+    return false;
+  }
+
+  /* le coup est-il "difficile à trouver" ? mat, ou pièce laissée en prise (sacrifice) */
+  function isHardToFind(game, m, san) {
+    if (san.slice(-1) === '#') return true;
+    var enemy = m.color === 'w' ? 'b' : 'w';
+    game._make(m);
+    /* sacrifice : la pièce est attaquée et n'est pas défendue */
+    var enPrise = game.isAttacked(m.to, enemy) && !game.isAttacked(m.to, m.color);
+    game._unmake();
+    return enPrise;
+  }
+
+  /**
+   * Classe un coup joué.
+   * best/played : {m, s} depuis scoreMoves (s = centipions, point de vue du trait)
+   */
+  function classifyMove(game, m, best, played, gap, san) {
+    var playedIsBest = played && played.m === best.m;
+    if (playedIsBest) {
+      return (gap >= 200 && !isTrivial(m) && isHardToFind(game, m, san))
+        ? 'brillant' : 'meilleur';
+    }
+    var bestS = best.s, playedS = played ? played.s : -MATE;
+    var loss = bestS - playedS;
+    /* coup manqué : le meilleur coup gagnait nettement (ou matait) et le coup joué laisse tout filer */
+    if (bestS >= 300 && playedS <= 80) return 'manque';
+    if (loss <= 60) return 'bon';
+    if (loss <= 160) return 'imprecision';
+    if (loss <= 350) return 'erreur';
+    return 'gaffe';
+  }
+
+  /* probabilité de gain façon lichess (0..100), pour la précision */
+  function winPercent(cp) {
+    var c = Math.max(-1000, Math.min(1000, cp));
+    return 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * c)) - 1);
+  }
+
+  /**
+   * Analyse une partie entière.
+   * startFen : FEN initial, moves : [{from:'e2',to:'e4',promotion?}]
+   * onProgress(done, total) appelé après chaque demi-coup.
+   * Retourne { plies:[...], accuracy:{w,b} }
+   */
+  function analyzeGame(startFen, moves, onProgress, depth) {
+    var game = new Chess(startFen || undefined);
+    var plies = [];
+    var acc = { w: [], b: [] };
+    depth = depth || 3;
+
+    for (var i = 0; i < moves.length; i++) {
+      var scored = scoreMoves(game, depth, 150000);
+      if (!scored.length) break;
+      var best = scored[0];
+      var second = scored[1] || null;
+      var gap = second ? best.s - second.s : 0;
+
+      var mv = moves[i];
+      var fromI = Chess.SQUARE_INDEX(mv.from), toI = Chess.SQUARE_INDEX(mv.to);
+      var played = null, legal = game.legalMoves();
+      for (var j = 0; j < scored.length; j++) {
+        var sm = scored[j].m;
+        if (sm.from === fromI && sm.to === toI &&
+            (sm.promotion || undefined) === (mv.promotion || undefined)) {
+          played = scored[j]; break;
+        }
+      }
+
+      var m = played ? played.m : null;
+      for (var k = 0; k < legal.length; k++) {
+        if (legal[k].from === fromI && legal[k].to === toI &&
+            (legal[k].promotion || undefined) === (mv.promotion || undefined)) { m = legal[k]; break; }
+      }
+      if (!m) break; /* coup illégal : on arrête */
+
+      /* le coup joué n'a pas été noté (budget nœuds épuisé) : le noter à part */
+      if (!played) {
+        game._make(m);
+        var s = game.legalMoves().length === 0
+          ? (game.inCheck(game.turn) ? MATE + 10 : 0)
+          : -search(game, depth - 1, -Infinity, Infinity, 0);
+        game._unmake();
+        played = { m: m, s: s };
+      }
+
+      var bestSan = sanOf(game, best.m, legal);
+      var san = sanOf(game, m, legal);
+      var cls = classifyMove(game, m, best, played, gap, san);
+      var playedS = played ? played.s : -MATE;
+
+      /* précision du coup (formule win%, du point de vue du trait) */
+      var wpLoss = Math.max(0, winPercent(best.s) - winPercent(playedS));
+      var moveAcc = Math.max(0, Math.min(100, 103.1668 * Math.exp(-0.04354 * wpLoss) - 3.1669));
+      acc[game.turn].push(moveAcc);
+
+      plies.push({
+        san: san, cls: cls, color: game.turn,
+        evalBefore: best.s, evalAfter: playedS,
+        bestSan: bestSan, best: toAlg(best.m),
+        loss: Math.max(0, best.s - playedS)
+      });
+
+      game._make(m);
+      game.history.push({ from: mv.from, to: mv.to, piece: m.piece, color: m.color,
+        captured: m.captured, promotion: m.promotion, flags: m.flags, san: san });
+      game._recordPos();
+      if (onProgress) onProgress(i + 1, moves.length);
+    }
+
+    var mean = function (a) { return a.length ? a.reduce(function (x, y) { return x + y; }, 0) / a.length : 0; };
+    return {
+      plies: plies,
+      accuracy: { w: Math.round(mean(acc.w) * 10) / 10, b: Math.round(mean(acc.b) * 10) / 10 }
+    };
+  }
+
+  var api = { pickMove: pickMove, evaluate: evaluate, thinkTime: thinkTime, paramsFor: paramsFor,
+    scoreMoves: scoreMoves, analyzeGame: analyzeGame, MATE: MATE, VALUES: VALUES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else global.CheeseAI = api;
 

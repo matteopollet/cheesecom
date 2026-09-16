@@ -118,6 +118,7 @@
               <div class="overlay-sub" id="overlay-sub">par échec et mat</div>
               <div class="overlay-btns">
                 <button class="btn green" id="btn-rematch">Revanche</button>
+                <button class="btn ghost" id="btn-analyze">Analyser</button>
                 <button class="btn ghost" id="btn-newbot">Choisir un bot</button>
               </div>
             </div>
@@ -242,6 +243,10 @@
       </div>
 
       <button class="btn-play" id="btn-play">Jouer</button>
+      <button class="btn-analysis" id="btn-analysis">
+        <svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.2-2.6 5.7-.9 1-1.4 1.7-1.4 2.8V18h-6v-.5c0-1.1-.5-1.9-1.4-2.8C6.2 13.2 5 11.4 5 9a7 7 0 0 1 7-7zM9 20h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z" fill="currentColor"/></svg>
+        Analyser une partie (PGN)
+      </button>
     </div>
 
     <!-- vue partie en cours -->
@@ -284,6 +289,41 @@
         </button>
       </div>
     </div>
+
+    <!-- vue analyse de partie -->
+    <div id="panel-analysis" class="hidden">
+      <div class="panel-header">
+        <svg class="ph-icon" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.2-2.6 5.7-.9 1-1.4 1.7-1.4 2.8V18h-6v-.5c0-1.1-.5-1.9-1.4-2.8C6.2 13.2 5 11.4 5 9a7 7 0 0 1 7-7zM9 20h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z" fill="#f5c542"/></svg>
+        <span class="ph-title">Analyse de partie</span>
+        <button class="ph-sound" id="an-back" title="Retour">
+          <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor"/></svg>
+        </button>
+      </div>
+
+      <div id="an-input">
+        <p class="an-hint">Colle le PGN d'une partie (chess.com → Partie terminée → « Télécharger » / copier le PGN) ou importe le fichier <b>.pgn</b> / <b>.txt</b>.</p>
+        <textarea id="an-pgn" spellcheck="false" placeholder='[Event "Live Chess"]&#10;[Site "Chess.com"]&#10;…&#10;&#10;1. e4 e5 2. Nf3 Nc6 …'></textarea>
+        <div class="an-btns">
+          <button class="btn ghost" id="an-file-btn">Choisir un fichier</button>
+          <input type="file" id="an-file" accept=".pgn,.txt,text/plain" hidden>
+          <button class="btn green" id="an-run">Analyser</button>
+        </div>
+      </div>
+
+      <div id="an-results" class="hidden">
+        <div class="an-progress" id="an-progress">
+          <div class="an-progress-track"><div class="an-progress-fill" id="an-progress-fill"></div></div>
+          <span id="an-progress-txt">Analyse…</span>
+        </div>
+        <div id="an-summary"></div>
+        <div id="an-info" class="an-info"></div>
+        <div class="moves-wrap">
+          <div class="moves-head"><span>Coups</span></div>
+          <div class="moves-list" id="moves-list-an"></div>
+        </div>
+        <button class="btn ghost an-new" id="an-new">Analyser une autre partie</button>
+      </div>
+    </div>
   </aside>
 </div>
 
@@ -291,12 +331,14 @@
 
 <script src="js/engine.js"></script>
 <script src="js/ai.js"></script>
+<script src="js/pgn.js"></script>
 <script src="js/bots.js"></script>
 <script src="js/app-state.js"></script>
 <script src="js/sound.js"></script>
 <script src="js/board.js"></script>
 <script src="js/panel.js"></script>
 <script src="js/game.js"></script>
+<script src="js/analysis.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

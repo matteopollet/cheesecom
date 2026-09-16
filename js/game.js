@@ -125,7 +125,7 @@
       S.viewGame = null; S.viewPly = null;
     } else {
       if (n < 0) n = 0;
-      var g = new Chess();
+      var g = new Chess(S.game._startFen || undefined);
       for (var i = 0; i < n; i++) {
         var h = S.game.history[i];
         g.move({ from: h.from, to: h.to, promotion: h.promotion });
@@ -146,13 +146,20 @@
   App.updateEval = function () {
     var g = App.displayGame();
     if (!g) return;
-    var cp = CheeseAI.evaluate(g, 0);
-    var wcp = g.turn === 'w' ? cp : -cp;
+    var wcp;
+    if (S.review && S.review.evalsW) {
+      var ply = S.viewPly == null ? S.game.history.length : S.viewPly;
+      wcp = ply === 0 ? S.review.ev0W : S.review.evalsW[ply - 1];
+    } else {
+      var cp = CheeseAI.evaluate(g, 0);
+      wcp = g.turn === 'w' ? cp : -cp;
+    }
     var pct = 1 / (1 + Math.pow(10, -wcp / 400)) * 100;
     var label = (wcp >= 0 ? '+' : '') + (wcp / 100).toFixed(1);
     var hist = g.history;
-    if (hist.length && hist[hist.length - 1].san.slice(-1) === '#') {
-      pct = g.turn === 'b' ? 100 : 0; /* le trait est le camp maté */
+    if (Math.abs(wcp) > CheeseAI.MATE - 2000 ||
+        (hist.length && hist[hist.length - 1].san.slice(-1) === '#')) {
+      pct = wcp >= 0 ? 100 : 0;
       label = '#';
     }
     App.$('#eval-fill').style.height = pct + '%';
@@ -280,10 +287,12 @@
     S.premove = null;
     S.pendingConfirm = null;
     S.viewGame = null; S.viewPly = null;
+    S.review = null;
     App.hideConfirm();
 
     $('#board-overlay').classList.add('hidden');
     $('#panel-select').classList.add('hidden');
+    $('#panel-analysis').classList.add('hidden');
     $('#panel-game').classList.remove('hidden');
     $('#chat-area').innerHTML = '';
     $('#game-vs').textContent = S.bot.name + ' (' + S.bot.rating + ') vs ' + App.USER.name;
@@ -308,9 +317,12 @@
     App.botThink(false);
     S.premove = null;
     S.viewGame = null; S.viewPly = null;
+    S.review = null;
+    if (App.stopAnalysis) App.stopAnalysis();
     App.hideConfirm();
     $('#board-overlay').classList.add('hidden');
     $('#panel-game').classList.add('hidden');
+    $('#panel-analysis').classList.add('hidden');
     $('#panel-select').classList.remove('hidden');
     App.closePromo();
     App.deselect();

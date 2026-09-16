@@ -35,6 +35,7 @@
       pendingConfirm: null,   /* {from, to, promotion?} */
       viewGame: null,         /* partie reconstruite pour la navigation */
       viewPly: null,          /* nb de plies rejouées (null = position live) */
+      review: null,           /* mode analyse : {white, black, result, plies, evalsW, accuracy} */
       prefs: null
     },
     selectedBot: null,      /* défini dans app.js au démarrage */

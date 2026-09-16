@@ -128,6 +128,7 @@
     $('#btn-sound').onclick = toggleSound;
     $('#panel-sound').onclick = toggleSound;
     $('#panel-menu').onclick = App.backToSelect;
+    App.initAnalysis();
 
     window.addEventListener('resize', App.renderHighlights);
     window.addEventListener('keydown', function (e) {

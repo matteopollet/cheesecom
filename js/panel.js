@@ -13,7 +13,10 @@
   /* ============ cartes joueurs ============ */
   App.renderCards = function () {
     var top, botm;
-    if (S.playerColor === 'w') { top = S.bot; botm = App.USER; }
+    if (S.review) {
+      var rw = S.review.white, rb = S.review.black;
+      if (S.flipped) { top = rw; botm = rb; } else { top = rb; botm = rw; }
+    } else if (S.playerColor === 'w') { top = S.bot; botm = App.USER; }
     else { top = App.USER; botm = S.bot; }
 
     $('#top-avatar').innerHTML = top.avatar;
@@ -62,9 +65,12 @@
 
   /* ============ liste des coups ============ */
   App.renderMoves = function () {
-    var list = $('#moves-list');
+    var inReview = !!S.review;
+    var list = inReview ? $('#moves-list-an') : $('#moves-list');
+    if (!list) return;
     list.innerHTML = '';
     var hist = S.game.history;
+    var plies = inReview ? S.review.plies : null;
     for (var i = 0; i < hist.length; i += 2) {
       var row = document.createElement('div');
       row.className = 'mv-row';
@@ -78,8 +84,14 @@
         s.className = 'mv' + (m && m.captured ? ' cap' : '');
         if (S.viewPly != null && ply === S.viewPly - 1) s.classList.add('viewed');
         else if (S.viewPly == null && ply === hist.length - 1) s.classList.add('latest');
-        s.textContent = m ? m.san : '';
         if (m) {
+          if (plies && plies[ply]) {
+            var cl = App.CLASSES[plies[ply].cls];
+            s.innerHTML = '<i class="cls-badge" style="background:' + cl.color + '">' + cl.icon + '</i>' + escapeHtml(m.san);
+            s.title = cl.label + (plies[ply].bestSan !== m.san ? ' — meilleur : ' + plies[ply].bestSan : '');
+          } else {
+            s.textContent = m.san;
+          }
           s.dataset.ply = ply;
           s.onclick = function () { App.viewPly(ply + 1); };
         }
@@ -88,6 +100,7 @@
       list.appendChild(row);
     }
     list.scrollTop = list.scrollHeight;
+    if (inReview) App.reviewInfo(S.viewPly != null ? S.viewPly - 1 : (hist.length ? hist.length - 1 : null));
   };
 
   /* ============ horloges ============ */
