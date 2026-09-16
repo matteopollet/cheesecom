@@ -74,9 +74,15 @@
       row.appendChild(num);
       [hist[i], hist[i + 1]].forEach(function (m, j) {
         var s = document.createElement('span');
+        var ply = i + j;
         s.className = 'mv' + (m && m.captured ? ' cap' : '');
-        if (i + j === hist.length - 1) s.classList.add('latest');
+        if (S.viewPly != null && ply === S.viewPly - 1) s.classList.add('viewed');
+        else if (S.viewPly == null && ply === hist.length - 1) s.classList.add('latest');
         s.textContent = m ? m.san : '';
+        if (m) {
+          s.dataset.ply = ply;
+          s.onclick = function () { App.viewPly(ply + 1); };
+        }
         row.appendChild(s);
       });
       list.appendChild(row);
@@ -228,5 +234,19 @@
     document.querySelectorAll('.bot-row').forEach(function (el) {
       el.classList.toggle('selected', el.dataset.botid === App.selectedBot.id);
     });
+  };
+
+  /* ============ préférences ============ */
+  App.applyPrefs = function () {
+    var p = S.prefs;
+    var board = $('#board');
+    board.className = board.className.replace(/theme-\w+/g, '').trim();
+    if (p.theme !== 'ice') board.classList.add('theme-' + p.theme);
+    board.classList.toggle('no-coords', !p.showCoords);
+    board.classList.toggle('no-anim', !p.anim);
+    $('#eval-bar').classList.toggle('hidden-bar', !p.evalBar);
+    App.renderHighlights();
+    App.updateEval();
+    App.savePrefs();
   };
 })();

@@ -471,6 +471,7 @@
     drawOk: ["D'accord, nulle.", "Oui, partageons le point.", "Accepté, belle partie."],
     drawNo: ["Non merci, je continue !", "Pas encore, la position m'intéresse.", "Je préfère jouer."],
     resign: ["Merci pour la partie !", "À la prochaine !"],
+    takeback: ["Pas de souci, on refait ce coup.", "OK, rejoue-le.", "Ça arrive, vas-y !"],
     think: ["Hmm...", "Intéressant...", "Voyons voir...", "Pas évident..."],
     flag: ["Le temps, c'est de l'argent.", "Trop lent !"]
   };

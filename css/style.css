@@ -160,7 +160,37 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .p-score { font-size: 13px; color: var(--muted); font-weight: 700; min-width: 22px; }
 
 /* ---- échiquier ---- */
-.board-frame { position: relative; }
+.board-frame { position: relative; display: flex; gap: 6px; align-items: stretch; }
+
+/* barre d'évaluation */
+.eval-bar {
+  position: relative;
+  width: 16px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #5b5966;
+  box-shadow: 0 8px 28px rgba(0,0,0,.45);
+  flex: none;
+}
+.eval-bar.hidden-bar { visibility: hidden; }
+.eval-fill {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 50%;
+  background: #f5f5f5;
+  transition: height .35s ease;
+}
+.eval-num {
+  position: absolute;
+  bottom: 3px; left: 0; right: 0;
+  text-align: center;
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #e8e6e3;
+  text-shadow: 0 1px 2px rgba(0,0,0,.7);
+  pointer-events: none;
+}
+
 #board {
   position: relative;
   width: 100%;
@@ -197,6 +227,14 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .hl.check::after { content: ""; position: absolute; inset: 0; background: var(--hl-check); }
 .hl.hover { box-shadow: inset 0 0 0 3px rgba(0,0,0,.25); }
 .hl.hint { background: rgba(129, 182, 76, .5); box-shadow: inset 0 0 0 3px rgba(129,182,76,.95); }
+.hl.pre { background: rgba(235, 120, 60, .5); }
+
+/* thèmes d'échiquier */
+#board.theme-classic { --sq-light: #eeeed2; --sq-dark: #769656; }
+#board.theme-walnut { --sq-light: #f0d9b5; --sq-dark: #b58863; }
+#board.theme-night { --sq-light: #9fa0a4; --sq-dark: #6e6f75; }
+#board.no-coords .coord { display: none; }
+#board.no-anim .piece { transition: none !important; }
 
 .hint-layer { pointer-events: none; z-index: 3; }
 .hint-dot {
@@ -256,6 +294,26 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   background-position: center;
 }
 .promo-btn:hover { background-color: #e8f4d9; }
+
+/* ---- confirmation de coup ---- */
+.confirm-move {
+  position: absolute;
+  z-index: 32;
+  display: none;
+  gap: 4px;
+}
+.confirm-move.open { display: flex; }
+.cfm-btn {
+  width: 34px; height: 34px;
+  border-radius: 6px;
+  font-size: 18px;
+  font-weight: 800;
+  box-shadow: 0 3px 10px rgba(0,0,0,.5);
+}
+.cfm-btn.ok { background: var(--green); color: #fff; }
+.cfm-btn.ok:hover { background: var(--green-hi); }
+.cfm-btn.no { background: #b04a3a; color: #fff; }
+.cfm-btn.no:hover { background: #c65a48; }
 
 /* ---- overlay résultat ---- */
 .board-overlay {
@@ -466,6 +524,34 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .seg-btn:hover { color: var(--text); }
 .seg-btn.active { background: var(--card-2); color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
 
+/* toggles options */
+.opt-toggle {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 13px; font-weight: 600; color: var(--text);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.opt-toggle input { display: none; }
+.opt-toggle .tk {
+  width: 32px; height: 18px;
+  border-radius: 9px;
+  background: #4a463f;
+  position: relative;
+  transition: background .15s;
+  flex: none;
+}
+.opt-toggle .tk::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #b0ada8;
+  transition: transform .15s, background .15s;
+}
+.opt-toggle input:checked + .tk { background: var(--green); }
+.opt-toggle input:checked + .tk::after { transform: translateX(14px); background: #fff; }
+
 /* ---- bouton jouer ---- */
 .btn-play {
   background: var(--green);
@@ -566,8 +652,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .mv-row { display: flex; align-items: center; padding: 2px 10px; gap: 4px; }
 .mv-row:nth-child(odd) { background: rgba(255,255,255,.025); }
 .mv-num { width: 26px; color: var(--muted-2); font-weight: 700; font-size: 12px; }
-.mv { padding: 2px 6px; border-radius: 4px; font-weight: 600; min-width: 62px; }
+.mv { padding: 2px 6px; border-radius: 4px; font-weight: 600; min-width: 62px; cursor: pointer; }
+.mv:hover { background: #3d3a36; }
 .mv.latest { background: #4a5a3a; color: #d7e8b8; }
+.mv.viewed { background: #3d5a80; color: #cfe0f5; }
 .mv.cap { color: #f0b8b0; }
 
 .game-actions {
@@ -588,6 +676,25 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .gact:hover { background: var(--card-hover); color: var(--text); }
 .gact.danger:hover { background: #5a3430; color: #ff8a7a; }
 .gact .half { font-size: 20px; font-weight: 800; }
+
+/* toast */
+.toast {
+  position: fixed;
+  bottom: 26px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #2c2a26;
+  border: 1px solid #454139;
+  color: var(--text);
+  font-size: 13.5px; font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 100;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* responsive léger */
 @media (max-width: 1150px) {

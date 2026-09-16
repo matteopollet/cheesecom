@@ -96,6 +96,10 @@
       </div>
 
       <div class="board-frame">
+        <div class="eval-bar" id="eval-bar" title="Évaluation">
+          <div class="eval-fill" id="eval-fill"></div>
+          <span class="eval-num" id="eval-num">+0.0</span>
+        </div>
         <div id="board">
           <div class="sq-layer" id="sq-layer"></div>
           <div class="hl-layer" id="hl-layer"></div>
@@ -103,6 +107,10 @@
           <div class="piece-layer" id="piece-layer"></div>
           <svg class="arrow-layer" id="arrow-layer"></svg>
           <div class="promo-picker" id="promo-picker"></div>
+          <div class="confirm-move" id="confirm-move">
+            <button class="cfm-btn ok" id="cfm-ok" title="Confirmer">✓</button>
+            <button class="cfm-btn no" id="cfm-no" title="Annuler">✗</button>
+          </div>
           <div class="board-overlay hidden" id="board-overlay">
             <div class="overlay-card">
               <div class="overlay-result" id="overlay-result">1-0</div>
@@ -210,6 +218,27 @@
           <button data-tc="blitz" class="seg-btn">5 min</button>
           <button data-tc="rapid" class="seg-btn">10 min</button>
         </div>
+        <div class="opt-label">Échiquier</div>
+        <div class="seg" id="seg-theme">
+          <button data-theme="ice" class="seg-btn active">Mer</button>
+          <button data-theme="classic" class="seg-btn">Vert</button>
+          <button data-theme="walnut" class="seg-btn">Noyer</button>
+          <button data-theme="night" class="seg-btn">Nuit</button>
+        </div>
+        <div class="opt-label">Promotion</div>
+        <div class="seg" id="seg-promo">
+          <button data-promo="ask" class="seg-btn active">Choisir</button>
+          <button data-promo="auto" class="seg-btn">Dame auto</button>
+        </div>
+        <div class="opt-label">Confirmer les coups</div>
+        <div class="seg" id="seg-confirm">
+          <button data-confirm="off" class="seg-btn active">Non</button>
+          <button data-confirm="on" class="seg-btn">Oui</button>
+        </div>
+        <label class="opt-toggle"><input type="checkbox" id="tgl-eval" checked><span class="tk"></span> Barre d'évaluation</label>
+        <label class="opt-toggle"><input type="checkbox" id="tgl-legal" checked><span class="tk"></span> Coups légaux</label>
+        <label class="opt-toggle"><input type="checkbox" id="tgl-coords" checked><span class="tk"></span> Coordonnées</label>
+        <label class="opt-toggle"><input type="checkbox" id="tgl-anim" checked><span class="tk"></span> Animations</label>
       </div>
 
       <button class="btn-play" id="btn-play">Jouer</button>
@@ -241,8 +270,14 @@
           <svg viewBox="0 0 24 24"><path d="M6 3v18h2v-7h6l-1.5 3H20V7h-7l1.5-2.5H8V3z" fill="currentColor" transform="rotate(0)"/><path d="M14.4 6L5 21" stroke="currentColor" stroke-width="0"/></svg>
         </button>
         <button class="gact" id="btn-draw" title="Proposer la nulle"><span class="half">½</span></button>
+        <button class="gact" id="btn-takeback" title="Retour en arrière">
+          <svg viewBox="0 0 24 24"><path d="M12.5 8a7 7 0 1 1-6.9 8.2l2-.4A5 5 0 1 0 12.5 10v3L8 9l4.5-4z" fill="currentColor"/></svg>
+        </button>
         <button class="gact" id="btn-hint2" title="Indice">
           <svg viewBox="0 0 24 24"><path d="M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9zm3-19a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2z" fill="currentColor"/></svg>
+        </button>
+        <button class="gact" id="btn-pgn" title="Copier le PGN">
+          <svg viewBox="0 0 24 24"><path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12zM19 5H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11z" fill="currentColor"/></svg>
         </button>
         <button class="gact" id="btn-quit" title="Retour aux bots">
           <svg viewBox="0 0 24 24"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67zM19 3H5a2 2 0 0 0-2 2v4h2V5h14v14H5v-4H3v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" fill="currentColor"/></svg>
@@ -251,6 +286,8 @@
     </div>
   </aside>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script src="js/engine.js"></script>
 <script src="js/ai.js"></script>

@@ -21,7 +21,7 @@
     return S.flipped ? (7 - y) * 8 + (7 - x) : y * 8 + x;
   };
 
-  function pieceAt(i) { return S.game.board[i]; }
+  function pieceAt(i) { return App.displayGame().board[i]; }
 
   /* ============ construction ============ */
   App.buildSquares = function () {
@@ -69,10 +69,11 @@
 
   App.renderPieces = function () {
     var layer = App.$('#piece-layer');
+    var g = App.displayGame();
     layer.innerHTML = '';
     S.pieceEls = {};
     for (var i = 0; i < 64; i++) {
-      var p = S.game.board[i];
+      var p = g.board[i];
       if (!p) continue;
       var el = makePieceEl(p, i);
       S.pieceEls[i] = el;
@@ -136,8 +137,8 @@
     var arrows = App.$('#arrow-layer');
     hl.innerHTML = ''; hint.innerHTML = ''; arrows.innerHTML = '';
 
-    /* dernier coup */
-    if (S.lastMove) {
+    /* dernier coup (position live uniquement) */
+    if (S.lastMove && !S.viewGame) {
       [S.lastMove.from, S.lastMove.to].forEach(function (sq) {
         var i = Chess.SQUARE_INDEX(sq);
         var p = App.displayXY(i);
@@ -158,19 +159,34 @@
       s.style.top = ps.y * 12.5 + '%';
       hl.appendChild(s);
 
-      S.legalFrom.forEach(function (m) {
-        var pp = App.displayXY(m.to);
+      if (S.prefs.showLegal) {
+        S.legalFrom.forEach(function (m) {
+          var pp = App.displayXY(m.to);
+          var d = document.createElement('div');
+          d.className = m.captured ? 'hint-ring' : 'hint-dot';
+          d.style.left = pp.x * 12.5 + '%';
+          d.style.top = pp.y * 12.5 + '%';
+          hint.appendChild(d);
+        });
+      }
+    }
+
+    /* premove */
+    if (S.premove) {
+      [S.premove.from, S.premove.to].forEach(function (sqI) {
+        var pp = App.displayXY(sqI);
         var d = document.createElement('div');
-        d.className = m.captured ? 'hint-ring' : 'hint-dot';
+        d.className = 'hl pre';
         d.style.left = pp.x * 12.5 + '%';
         d.style.top = pp.y * 12.5 + '%';
-        hint.appendChild(d);
+        hl.appendChild(d);
       });
     }
 
     /* roi en échec */
-    if (S.game && S.game.inCheck(S.game.turn)) {
-      var k = S.game.kingSquare(S.game.turn);
+    var dg = App.displayGame();
+    if (dg && dg.inCheck(dg.turn)) {
+      var k = dg.kingSquare(dg.turn);
       var pk = App.displayXY(k);
       var c = document.createElement('div');
       c.className = 'hl check';
@@ -279,42 +295,77 @@
     S.promoPending = null;
   };
 
+  /* ---------- confirmation de coup ---------- */
+  App.showConfirm = function (toI) {
+    var cfm = App.$('#confirm-move');
+    var board = App.$('#board');
+    var cell = board.clientWidth / 8;
+    var p = App.displayXY(toI);
+    var left = p.x * cell + cell - 6;
+    var top = p.y * cell - 2;
+    if (left + 78 > board.clientWidth) left = p.x * cell - 78 + 6;
+    if (top < 0) top = 0;
+    cfm.style.left = left + 'px';
+    cfm.style.top = top + 'px';
+    cfm.classList.add('open');
+  };
+
+  App.hideConfirm = function () {
+    App.$('#confirm-move').classList.remove('open');
+    S.pendingConfirm = null;
+  };
+
   /* ---------- interactions souris ---------- */
   App.isUserTurn = function () {
-    return S.active && !S.inputLocked && S.game.turn === S.playerColor;
+    return S.active && !S.inputLocked && !S.viewGame &&
+      S.game.turn === S.playerColor;
+  };
+
+  /* tour adverse : on peut préparer un premove */
+  App.isPremoveTurn = function () {
+    return S.active && !S.viewGame && S.game.turn !== S.playerColor;
   };
 
   App.onPointerDown = function (e) {
     if (!S.game) return;
     if (e.target && e.target.closest && e.target.closest('.promo-picker')) return;
+    if (e.target && e.target.closest && e.target.closest('.confirm-move')) return;
     if (e.button === 2) { /* clic droit : marques */
       var i0 = App.squareFromEvent(e);
       if (i0 >= 0) S.rightStart = i0;
       return;
     }
     if (e.button !== 0) return;
+    if (S.viewGame) return; /* navigation : pas d'interaction */
     App.closePromo();
+    App.hideConfirm();
     App.clearMarks();
+    if (S.premove) { S.premove = null; App.renderHighlights(); }
 
     var i = App.squareFromEvent(e);
     if (i < 0) return;
     var p = pieceAt(i);
 
     /* destination d'un coup déjà sélectionné */
-    if (S.selected >= 0 && S.legalFrom.some(function (m) { return m.to === i; })) {
+    if (App.isUserTurn() && S.selected >= 0 &&
+        S.legalFrom.some(function (m) { return m.to === i; })) {
       var ok = App.tryMove(S.selected, i);
-      if (!ok) Sound.illegal();
+      if (ok !== true && ok !== 'pending') Sound.illegal();
       return;
     }
 
-    if (App.isUserTurn() && p && p.color === S.playerColor) {
-      App.select(i);
+    if ((App.isUserTurn() || App.isPremoveTurn()) && p && p.color === S.playerColor) {
+      S.selected = i;
+      S.legalFrom = App.isUserTurn() ? S.game.legalMoves(App.sqName(i)) : [];
+      Sound.select();
+      App.renderHighlights();
       var el = S.pieceEls[i];
       var rect = App.$('#board').getBoundingClientRect();
       S.drag = {
         el: el, from: i, moved: false,
         startX: e.clientX, startY: e.clientY,
-        ox: e.clientX - rect.left, oy: e.clientY - rect.top
+        ox: e.clientX - rect.left, oy: e.clientY - rect.top,
+        premove: App.isPremoveTurn()
       };
       el.classList.add('dragging');
       App.$('#board').setPointerCapture(e.pointerId);
@@ -357,9 +408,19 @@
 
     var to = App.squareFromEvent(e);
     if (d.moved && to >= 0 && to !== d.from) {
+      /* premove : enregistré, exécuté au tour du joueur si légal */
+      if (d.premove) {
+        S.premove = { from: d.from, to: to };
+        S.selected = -1;
+        App.renderHighlights();
+        Sound.select();
+        App.setPiecePos(d.el, parseInt(d.el.dataset.sq, 10), false);
+        return;
+      }
       var legal = S.legalFrom.some(function (m) { return m.to === to; });
       if (legal) {
-        App.tryMove(d.from, to);
+        var r = App.tryMove(d.from, to);
+        if (r === 'pending') return; /* pièce replacée à la confirmation/annulation */
         return;
       }
       Sound.illegal();

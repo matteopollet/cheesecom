@@ -61,13 +61,61 @@
         S.timeControl = b.dataset.tc;
       };
     });
+    document.querySelectorAll('#seg-theme .seg-btn').forEach(function (b) {
+      b.onclick = function () {
+        document.querySelectorAll('#seg-theme .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+        b.classList.add('active');
+        S.prefs.theme = b.dataset.theme;
+        App.applyPrefs();
+      };
+    });
+    document.querySelectorAll('#seg-promo .seg-btn').forEach(function (b) {
+      b.onclick = function () {
+        document.querySelectorAll('#seg-promo .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+        b.classList.add('active');
+        S.prefs.autoQueen = b.dataset.promo === 'auto';
+        App.applyPrefs();
+      };
+    });
+    document.querySelectorAll('#seg-confirm .seg-btn').forEach(function (b) {
+      b.onclick = function () {
+        document.querySelectorAll('#seg-confirm .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+        b.classList.add('active');
+        S.prefs.confirmMove = b.dataset.confirm === 'on';
+        App.applyPrefs();
+      };
+    });
+    $('#tgl-eval').onchange = function () { S.prefs.evalBar = this.checked; App.applyPrefs(); };
+    $('#tgl-legal').onchange = function () { S.prefs.showLegal = this.checked; App.applyPrefs(); };
+    $('#tgl-coords').onchange = function () { S.prefs.showCoords = this.checked; App.applyPrefs(); };
+    $('#tgl-anim').onchange = function () { S.prefs.anim = this.checked; App.applyPrefs(); };
+
+    /* état initial des options depuis les prefs */
+    document.querySelectorAll('#seg-theme .seg-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.theme === S.prefs.theme);
+    });
+    document.querySelectorAll('#seg-promo .seg-btn').forEach(function (b) {
+      b.classList.toggle('active', (b.dataset.promo === 'auto') === S.prefs.autoQueen);
+    });
+    document.querySelectorAll('#seg-confirm .seg-btn').forEach(function (b) {
+      b.classList.toggle('active', (b.dataset.confirm === 'on') === S.prefs.confirmMove);
+    });
+    $('#tgl-eval').checked = S.prefs.evalBar;
+    $('#tgl-legal').checked = S.prefs.showLegal;
+    $('#tgl-coords').checked = S.prefs.showCoords;
+    $('#tgl-anim').checked = S.prefs.anim;
+    App.applyPrefs();
 
     /* actions partie */
     $('#btn-resign').onclick = App.resign;
     $('#btn-resign').classList.add('danger');
     $('#btn-draw').onclick = App.offerDraw;
+    $('#btn-takeback').onclick = App.takeback;
     $('#btn-hint2').onclick = App.hint;
+    $('#btn-pgn').onclick = App.copyPGN;
     $('#btn-quit').onclick = App.backToSelect;
+    $('#cfm-ok').onclick = function (e) { e.stopPropagation(); App.confirmPending(); };
+    $('#cfm-no').onclick = function (e) { e.stopPropagation(); App.cancelConfirm(); };
     $('#btn-rematch').onclick = App.startGame;
     $('#btn-newbot').onclick = App.backToSelect;
     $('#btn-flip').onclick = function () {
@@ -83,7 +131,20 @@
 
     window.addEventListener('resize', App.renderHighlights);
     window.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { App.deselect(); App.closePromo(); }
+      if (e.key === 'Escape') { App.deselect(); App.closePromo(); App.hideConfirm(); }
+      else if (e.key === 'ArrowLeft' && S.game) {
+        App.viewPly(S.viewPly == null ? S.game.history.length - 1 : S.viewPly - 1);
+      } else if (e.key === 'ArrowRight' && S.game) {
+        App.viewPly(S.viewPly == null ? S.game.history.length : S.viewPly + 1);
+      } else if (e.key === 'Home' && S.game) {
+        App.viewPly(0);
+      } else if (e.key === 'End' && S.game) {
+        App.viewPly(null);
+      } else if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey) {
+        S.flipped = !S.flipped;
+        App.buildSquares();
+        App.closePromo(); App.hideConfirm(); App.deselect();
+      }
     });
 
     /* handle de debug : activé via ?debug ou localStorage.cheesecom_debug */
