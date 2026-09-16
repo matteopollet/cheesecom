@@ -475,8 +475,9 @@
   }
 
   /* ---------- bilan coup par coup ---------- */
+  /* (null hors review ou pendant une variante) */
   App.reviewPlyIndex = function () {
-    if (!S.review || !S.review.plies || !S.game) return null;
+    if (!S.review || !S.review.plies || !S.game || S.varBase != null) return null;
     var ply = S.viewPly == null ? S.game.history.length : S.viewPly;
     var idx = ply - 1;
     return (idx >= 0 && idx < S.review.plies.length) ? idx : null;
@@ -493,6 +494,7 @@
       if (S.prefs.autoQueen) promo = 'q';
       else { App.openPromo(fromI, toI); return true; }
     }
+    var fenBefore = g.fen();
     var mv = g.move({ from: App.sqName(fromI), to: App.sqName(toI), promotion: promo });
     if (!mv) { Sound.illegal(); return false; }
 
@@ -504,6 +506,7 @@
     }
     S.varMoves.push(mv); S.varPly++;
     S.viewGame = g;
+    S.varReply = null;
 
     App.deselect();
     App.applyMoveUI(mv);
@@ -515,7 +518,42 @@
     else if (mv.flags & (Chess.FLAGS.KSIDE | Chess.FLAGS.QSIDE)) Sound.castle();
     else Sound.move();
     if (mv.san.indexOf('+') >= 0) setTimeout(function () { Sound.check(); }, 140);
+
+    /* analyse du coup joué : classe + meilleure réponse adverse (async) */
+    var target = mv;
+    App.exploreMove(fenBefore,
+      { from: mv.from, to: mv.to, promotion: mv.promotion },
+      function (res) {
+        if (!res) return;
+        target.an = res;
+        /* affiche seulement si la position n'a pas changé entre-temps */
+        if (S.varBase == null) return;
+        if (S.varPly > 0 && S.varMoves[S.varPly - 1] === target) {
+          S.varReply = res.reply;
+          App.renderMoves();
+          App.renderHighlights();
+        }
+      });
     return true;
+  };
+
+  /* flèche verte du meilleur coup quand on navigue dans une variante */
+  App.requestVarHint = function () {
+    if (S.varBase == null) return;
+    var last = S.varPly > 0 ? S.varMoves[S.varPly - 1] : null;
+    if (last && last.an) {
+      S.varReply = last.an.reply;
+      App.renderHighlights();
+      return;
+    }
+    var fen = App.displayGame().fen();
+    App.bestMoveAt(fen, function (res) {
+      if (S.varBase == null) return;
+      var dg = App.displayGame();
+      if (!dg || dg.fen() !== fen) return; /* la position a changé */
+      S.varReply = res ? res.move : null;
+      App.renderHighlights();
+    });
   };
 
   /* appelé depuis renderMoves à chaque navigation */
@@ -527,13 +565,28 @@
     explainOpen = false;
     $('#an-explain-box').classList.add('hidden');
 
-    /* variante en cours : la bulle affiche la ligne explorée */
+    /* variante en cours : la bulle affiche la ligne explorée + l'analyse du coup */
     if (S.varBase != null) {
       var vs = S.varMoves.slice(0, S.varPly).map(function (m) { return m.san; });
-      el.innerHTML =
-        '<i class="cls-badge" style="background:#5f97c4">↳</i> ' +
-        'Variante : ' + escapeHtml(vs.join(' ') || '…') +
-        '<span class="an-ev">clique sur un coup pour revenir</span>';
+      var last = S.varPly > 0 ? S.varMoves[S.varPly - 1] : null;
+      if (last && last.an) {
+        var a = last.an, cl2 = CLASSES[a.cls];
+        var t2 = a.san + PHRASES[a.cls];
+        if (['imprecision', 'erreur', 'gaffe', 'manque'].indexOf(a.cls) >= 0 && a.bestSan !== a.san) {
+          t2 += ' Le meilleur coup était ' + a.bestSan + '.';
+        }
+        if (a.replySan && S.varPly === S.varMoves.length) {
+          t2 += ' Meilleure réponse : ' + a.replySan + '.';
+        }
+        el.innerHTML =
+          '<i class="cls-badge" style="background:' + cl2.color + '">' + cl2.icon + '</i> ' +
+          escapeHtml(t2);
+      } else {
+        el.innerHTML =
+          '<i class="cls-badge" style="background:#5f97c4">↳</i> ' +
+          'Variante : ' + escapeHtml(vs.join(' ') || '…') +
+          '<span class="an-ev">clique sur un coup pour revenir</span>';
+      }
       App.drawAnGraphs();
       return;
     }

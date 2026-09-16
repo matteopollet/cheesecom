@@ -195,6 +195,31 @@
       hl.appendChild(c);
     }
 
+    /* variante : surlignage du dernier coup joué + pastille de classe */
+    if (S.varBase != null && S.varPly > 0) {
+      var vm = S.varMoves[S.varPly - 1];
+      var vcl = vm.an ? App.CLASSES[vm.an.cls] : { color: '#5f97c4', icon: '↳' };
+      [vm.from, vm.to].forEach(function (sq) {
+        var vi = Chess.SQUARE_INDEX(sq);
+        var pv = App.displayXY(vi);
+        var dv = document.createElement('div');
+        dv.className = 'hl';
+        dv.style.left = pv.x * 12.5 + '%';
+        dv.style.top = pv.y * 12.5 + '%';
+        dv.style.background = vcl.color;
+        dv.style.opacity = '0.45';
+        hl.appendChild(dv);
+      });
+      var pvb = App.displayXY(Chess.SQUARE_INDEX(vm.to));
+      var bdv = document.createElement('div');
+      bdv.className = 'sq-badge';
+      bdv.style.background = vcl.color;
+      bdv.textContent = vcl.icon;
+      bdv.style.left = 'calc(' + (pvb.x * 12.5 + 12.5) + '% - 11px)';
+      bdv.style.top = (pvb.y * 12.5) + '%';
+      hl.appendChild(bdv);
+    }
+
     /* mode analyse : surlignage coloré du coup + pastille de classe */
     var reviewPly = App.reviewPlyIndex();
     if (reviewPly != null) {
@@ -242,6 +267,14 @@
     });
     if (S.hintArrow) {
       App.drawArrow(arrows, S.hintArrow.from, S.hintArrow.to, 'rgba(129,182,76,.9)');
+    }
+
+    /* variante : flèche verte du meilleur coup pour le camp au trait */
+    if (S.varBase != null && S.varReply && S.varPly === S.varMoves.length) {
+      App.drawArrow(arrows,
+        Chess.SQUARE_INDEX(S.varReply.from),
+        Chess.SQUARE_INDEX(S.varReply.to),
+        'rgba(129,182,76,.85)');
     }
 
     /* mode analyse : flèche verte du meilleur coup si le coup joué diffère */

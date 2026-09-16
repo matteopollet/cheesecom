@@ -39,6 +39,7 @@
       varBase: null,          /* variante : ply de la ligne principale où elle commence */
       varMoves: [],           /* coups joués dans la variante */
       varPly: 0,              /* coups de la variante actuellement rejoués */
+      varReply: null,         /* meilleure réponse du moteur (flèche verte) */
       prefs: null
     },
     selectedBot: null,      /* défini dans app.js au démarrage */

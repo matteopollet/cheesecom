@@ -392,8 +392,72 @@
     };
   }
 
+  /**
+   * Analyse un coup joué à la position courante (mode variante).
+   * Retourne la classe du coup + la meilleure réponse de l'adversaire.
+   */
+  function analyzeMove(game, mv, depth) {
+    depth = depth || 3;
+    var scored = scoreMoves(game, depth, 150000);
+    if (!scored.length) return null;
+    var best = scored[0];
+    var second = scored[1] || null;
+    var gap = second ? best.s - second.s : 0;
+    var legal = game.legalMoves();
+    var fromI = Chess.SQUARE_INDEX(mv.from), toI = Chess.SQUARE_INDEX(mv.to);
+    var played = null, m = null;
+    for (var j = 0; j < scored.length; j++) {
+      var sm = scored[j].m;
+      if (sm.from === fromI && sm.to === toI &&
+          (sm.promotion || undefined) === (mv.promotion || undefined)) { played = scored[j]; break; }
+    }
+    for (var k = 0; k < legal.length; k++) {
+      if (legal[k].from === fromI && legal[k].to === toI &&
+          (legal[k].promotion || undefined) === (mv.promotion || undefined)) { m = legal[k]; break; }
+    }
+    if (!m) return null;
+    if (!played) {
+      game._make(m);
+      var s = game.legalMoves().length === 0
+        ? (game.inCheck(game.turn) ? MATE + 10 : 0)
+        : -search(game, depth - 1, -Infinity, Infinity, 0);
+      game._unmake();
+      played = { m: m, s: s };
+    }
+    var bestSan = sanOf(game, best.m, legal);
+    var san = sanOf(game, m, legal);
+    var cls = classifyMove(game, m, best, played, gap, san);
+
+    /* meilleure réponse de l'adversaire */
+    game._make(m);
+    var reply = null, replySan = '';
+    var sc2 = scoreMoves(game, depth, 150000);
+    if (sc2.length) {
+      reply = toAlg(sc2[0].m);
+      replySan = sanOf(game, sc2[0].m, game.legalMoves());
+    }
+    game._unmake();
+
+    return {
+      san: san, cls: cls, color: m.color,
+      bestSan: bestSan, best: toAlg(best.m),
+      reply: reply, replySan: replySan,
+      evalBefore: best.s, evalAfter: played.s,
+      loss: Math.max(0, best.s - played.s)
+    };
+  }
+
+  /* meilleur coup à la position courante (pour la flèche verte) */
+  function bestMove(game, depth) {
+    var scored = scoreMoves(game, depth || 3, 150000);
+    if (!scored.length) return null;
+    var legal = game.legalMoves();
+    return { move: toAlg(scored[0].m), san: sanOf(game, scored[0].m, legal), score: scored[0].s };
+  }
+
   var api = { pickMove: pickMove, evaluate: evaluate, thinkTime: thinkTime, paramsFor: paramsFor,
-    scoreMoves: scoreMoves, analyzeGame: analyzeGame, MATE: MATE, VALUES: VALUES };
+    scoreMoves: scoreMoves, analyzeGame: analyzeGame, analyzeMove: analyzeMove,
+    bestMove: bestMove, MATE: MATE, VALUES: VALUES };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else global.CheeseAI = api;
 

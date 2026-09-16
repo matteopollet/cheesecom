@@ -16,7 +16,7 @@
     aiWorker.onmessage = function (e) {
       var cb = aiPending[e.data.id];
       delete aiPending[e.data.id];
-      if (cb) cb(e.data.move);
+      if (cb) cb(e.data);
     };
     aiWorker.onerror = function () { aiWorker = null; };
   }
@@ -24,12 +24,38 @@
   App.aiMove = function (fen, rating, aggression, cb) {
     if (aiWorker) {
       var id = ++aiReqId;
-      aiPending[id] = cb;
+      aiPending[id] = function (d) { cb(d.move); };
       aiWorker.postMessage({ id: id, fen: fen, rating: rating, aggression: aggression });
     } else {
       setTimeout(function () {
         var g = new Chess(fen);
         cb(CheeseAI.pickMove(g, { rating: rating, aggression: aggression }));
+      }, 10);
+    }
+  };
+
+  /* analyse un coup joué en variante : classe + meilleure réponse */
+  App.exploreMove = function (fen, move, cb) {
+    if (aiWorker) {
+      var id = ++aiReqId;
+      aiPending[id] = function (d) { cb(d.result); };
+      aiWorker.postMessage({ id: id, type: 'explore', fen: fen, move: move, depth: 3 });
+    } else {
+      setTimeout(function () {
+        cb(CheeseAI.analyzeMove(new Chess(fen), move, 3));
+      }, 10);
+    }
+  };
+
+  /* meilleur coup à une position (flèche verte en variante) */
+  App.bestMoveAt = function (fen, cb) {
+    if (aiWorker) {
+      var id = ++aiReqId;
+      aiPending[id] = function (d) { cb(d.result); };
+      aiWorker.postMessage({ id: id, type: 'best', fen: fen, depth: 3 });
+    } else {
+      setTimeout(function () {
+        cb(CheeseAI.bestMove(new Chess(fen), 3));
       }, 10);
     }
   };
@@ -142,7 +168,7 @@
     if (!S.game) return;
     var len = S.game.history.length;
     /* quitter la variante : la navigation se fait sur la ligne principale */
-    S.varBase = null; S.varMoves = []; S.varPly = 0;
+    S.varBase = null; S.varMoves = []; S.varPly = 0; S.varReply = null;
     if (n == null || n >= len) {
       S.viewGame = null; S.viewPly = null;
     } else {
@@ -172,6 +198,7 @@
     App.renderMoves();
     App.renderHighlights();
     App.updateEval();
+    if (App.requestVarHint) App.requestVarHint();
   };
 
   /* navigation unifiée : traverse la variante si active, sinon la ligne principale */
