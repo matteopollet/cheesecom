@@ -195,6 +195,33 @@
       hl.appendChild(c);
     }
 
+    /* mode analyse : surlignage coloré du coup + pastille de classe */
+    var reviewPly = App.reviewPlyIndex();
+    if (reviewPly != null) {
+      var pm = S.game.history[reviewPly];
+      var an = S.review.plies[reviewPly];
+      var cl = App.CLASSES[an.cls];
+      [pm.from, pm.to].forEach(function (sq) {
+        var i = Chess.SQUARE_INDEX(sq);
+        var pp = App.displayXY(i);
+        var d = document.createElement('div');
+        d.className = 'hl';
+        d.style.left = pp.x * 12.5 + '%';
+        d.style.top = pp.y * 12.5 + '%';
+        d.style.background = cl.color;
+        d.style.opacity = '0.45';
+        hl.appendChild(d);
+      });
+      var pb = App.displayXY(Chess.SQUARE_INDEX(pm.to));
+      var bd = document.createElement('div');
+      bd.className = 'sq-badge';
+      bd.style.background = cl.color;
+      bd.textContent = cl.icon;
+      bd.style.left = 'calc(' + (pb.x * 12.5 + 12.5) + '% - 11px)';
+      bd.style.top = (pb.y * 12.5) + '%';
+      hl.appendChild(bd);
+    }
+
     /* marques utilisateur (clic droit) */
     Object.keys(S.userMarks).forEach(function (k2) {
       var i2 = parseInt(k2, 10);
@@ -215,6 +242,17 @@
     });
     if (S.hintArrow) {
       App.drawArrow(arrows, S.hintArrow.from, S.hintArrow.to, 'rgba(129,182,76,.9)');
+    }
+
+    /* mode analyse : flèche verte du meilleur coup si le coup joué diffère */
+    if (reviewPly != null) {
+      var an2 = S.review.plies[reviewPly];
+      if (an2.cls !== 'meilleur' && an2.cls !== 'brillant' && an2.best) {
+        App.drawArrow(arrows,
+          Chess.SQUARE_INDEX(an2.best.from),
+          Chess.SQUARE_INDEX(an2.best.to),
+          'rgba(129,182,76,.85)');
+      }
     }
   };
 

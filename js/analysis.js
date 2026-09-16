@@ -233,6 +233,14 @@
     $('#an-summary').innerHTML = html;
   }
 
+  /* index du demi-coup affiché en mode analyse (null hors review) */
+  App.reviewPlyIndex = function () {
+    if (!S.review || !S.review.plies || !S.game) return null;
+    var ply = S.viewPly == null ? S.game.history.length : S.viewPly;
+    var idx = ply - 1;
+    return (idx >= 0 && idx < S.review.plies.length) ? idx : null;
+  };
+
   /* infos du coup survolé/sélectionné (appelé depuis renderMoves) */
   App.reviewInfo = function (plyIdx) {
     var rev = S.review;
@@ -245,6 +253,13 @@
     if (p.cls !== 'meilleur' && p.cls !== 'brillant' && p.bestSan !== p.san) {
       txt += ' — le meilleur coup était ' + p.bestSan;
     }
+    /* variation de l'éval (point de vue blancs) */
+    var evW = function (s) { return p.color === 'w' ? s : -s; };
+    var fmt = function (cp) {
+      if (Math.abs(cp) > CheeseAI.MATE - 2000) return '#';
+      return (cp >= 0 ? '+' : '') + (cp / 100).toFixed(1);
+    };
+    txt += ' · ' + fmt(evW(p.evalBefore)) + ' → ' + fmt(evW(p.evalAfter));
     el.innerHTML = '<i class="cls-badge" style="background:' + cl.color + '">' + cl.icon + '</i> ' + escapeHtml(txt);
   };
 
@@ -266,5 +281,14 @@
     };
     $('#btn-analysis').onclick = App.openAnalysis;
     $('#btn-analyze').onclick = App.analyzeCurrentGame;
+
+    /* navigation dans la partie analysée */
+    var cur = function () {
+      return S.viewPly == null ? (S.game ? S.game.history.length : 0) : S.viewPly;
+    };
+    $('#an-first').onclick = function () { App.viewPly(0); };
+    $('#an-prev').onclick = function () { App.viewPly(cur() - 1); };
+    $('#an-next').onclick = function () { App.viewPly(cur() + 1); };
+    $('#an-last').onclick = function () { App.viewPly(null); };
   };
 })();
