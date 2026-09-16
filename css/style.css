@@ -359,13 +359,18 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   overflow: hidden;
 }
 
-#panel-select, #panel-game {
+#panel-select, #panel-game, #panel-analysis {
   display: flex;
   flex-direction: column;
   height: 100%;
   padding: 14px 14px 14px;
   gap: 12px;
 }
+
+/* le panneau d'analyse remplit la hauteur : liste scrollable, nav en bas */
+#an-results { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+#an-results .moves-wrap { min-height: 0; }
+.an-nav { flex: 0 0 auto; }
 
 .panel-header {
   display: flex; align-items: center; gap: 10px;

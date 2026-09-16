@@ -121,6 +121,8 @@
     $('#btn-flip').onclick = function () {
       S.flipped = !S.flipped;
       App.buildSquares();
+      App.renderCards();
+      App.renderCaptured();
       App.closePromo();
       App.deselect();
     };
@@ -144,6 +146,8 @@
       } else if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey) {
         S.flipped = !S.flipped;
         App.buildSquares();
+        App.renderCards();
+        App.renderCaptured();
         App.closePromo(); App.hideConfirm(); App.deselect();
       }
     });

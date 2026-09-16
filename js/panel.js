@@ -11,13 +11,20 @@
   var escapeHtml = App.escapeHtml;
 
   /* ============ cartes joueurs ============ */
+  /* qui est en bas de l'échiquier dépend de l'orientation (S.flipped) */
+  App.sideAtBottom = function () {
+    var bottomColor = S.flipped ? 'b' : 'w';
+    var wSide = S.review ? S.review.white : (S.playerColor === 'w' ? App.USER : S.bot);
+    var bSide = S.review ? S.review.black : (S.playerColor === 'b' ? App.USER : S.bot);
+    return { bottom: bottomColor === 'w' ? wSide : bSide,
+             top:    bottomColor === 'w' ? bSide : wSide,
+             bottomColor: bottomColor,
+             topColor: bottomColor === 'w' ? 'b' : 'w' };
+  };
+
   App.renderCards = function () {
-    var top, botm;
-    if (S.review) {
-      var rw = S.review.white, rb = S.review.black;
-      if (S.flipped) { top = rw; botm = rb; } else { top = rb; botm = rw; }
-    } else if (S.playerColor === 'w') { top = S.bot; botm = App.USER; }
-    else { top = App.USER; botm = S.bot; }
+    var sides = App.sideAtBottom();
+    var top = sides.top, botm = sides.bottom;
 
     $('#top-avatar').innerHTML = top.avatar;
     $('#top-name').innerHTML = escapeHtml(top.name) + (top.rating ? ' <em class="p-rating">(' + top.rating + ')</em>' : '');
@@ -50,17 +57,12 @@
       return html;
     }
     var adv = lost.b - lost.w; /* >0 : les blancs ont pris plus */
-    if (S.playerColor === 'w') {
-      $('#top-captured').innerHTML = capsHTML('w');
-      $('#bot-captured').innerHTML = capsHTML('b');
-      $('#top-score').textContent = adv < 0 ? '+' + (-adv) : '';
-      $('#bot-score').textContent = adv > 0 ? '+' + adv : '';
-    } else {
-      $('#top-captured').innerHTML = capsHTML('b');
-      $('#bot-captured').innerHTML = capsHTML('w');
-      $('#top-score').textContent = adv > 0 ? '+' + adv : '';
-      $('#bot-score').textContent = adv < 0 ? '+' + (-adv) : '';
-    }
+    var sides = App.sideAtBottom();
+    $('#top-captured').innerHTML = capsHTML(sides.topColor);
+    $('#bot-captured').innerHTML = capsHTML(sides.bottomColor);
+    var advTop = sides.topColor === 'w' ? adv : -adv;
+    $('#top-score').textContent = advTop > 0 ? '+' + advTop : '';
+    $('#bot-score').textContent = advTop < 0 ? '+' + (-advTop) : '';
   };
 
   /* ============ liste des coups ============ */
