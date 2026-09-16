@@ -104,9 +104,10 @@
   App.runPremove = function () {
     var pm = S.premove.shift();
     if (!pm) return;
+    var toI = Chess.SQUARE_INDEX(pm.to);
     var legal = S.game.legalMoves(pm.from);
     var ok = legal.some(function (m) {
-      return m.to === pm.to && (!m.promotion || m.promotion === 'q');
+      return m.to === toI && (!m.promotion || m.promotion === 'q');
     });
     if (ok) {
       var mv = S.game.move({ from: pm.from, to: pm.to, promotion: 'q' });
