@@ -123,6 +123,7 @@
       App.buildSquares();
       App.renderCards();
       App.renderCaptured();
+      App.updateEval();
       App.closePromo();
       App.deselect();
     };
@@ -148,6 +149,7 @@
         App.buildSquares();
         App.renderCards();
         App.renderCaptured();
+        App.updateEval();
         App.closePromo(); App.hideConfirm(); App.deselect();
       }
     });

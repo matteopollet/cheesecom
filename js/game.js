@@ -162,6 +162,7 @@
       pct = wcp >= 0 ? 100 : 0;
       label = '#';
     }
+    App.$('#eval-bar').classList.toggle('flipped', S.flipped);
     App.$('#eval-fill').style.height = pct + '%';
     var num = App.$('#eval-num');
     num.textContent = label;
