@@ -31,7 +31,8 @@
       rewards: parseInt(localStorage.getItem('cheesecom_rewards') || '0', 10),
       msgCount: 0,
       /* fonctions avancées */
-      premove: null,          /* {from, to, promotion?} */
+      premove: [],            /* file de {from, to} chaînés pendant le tour adverse */
+      pmFrom: -1,             /* case virtuelle de la pièce saisie pour un premove */
       pendingConfirm: null,   /* {from, to, promotion?} */
       viewGame: null,         /* partie reconstruite pour la navigation */
       viewPly: null,          /* nb de plies rejouées (null = position live) */

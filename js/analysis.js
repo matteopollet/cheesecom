@@ -86,7 +86,7 @@
     App.hideConfirm();
     App.closePromo();
     App.deselect();
-    S.premove = null;
+    S.premove = [];
     $('#board-overlay').classList.add('hidden');
     $('#panel-select').classList.add('hidden');
     $('#panel-game').classList.add('hidden');

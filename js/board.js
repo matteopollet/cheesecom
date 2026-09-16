@@ -23,6 +23,23 @@
 
   function pieceAt(i) { return App.displayGame().board[i]; }
 
+  /* plateau virtuel après application des premoves en file :
+     board = positions virtuelles, vpos = case visuelle -> case virtuelle */
+  App.pmVirtual = function () {
+    var v = { board: S.game.board.slice(), vpos: {} };
+    var visLoc = {}; /* case virtuelle -> case visuelle de la pièce */
+    S.premove.forEach(function (pm) {
+      var from = Chess.SQUARE_INDEX(pm.from), to = Chess.SQUARE_INDEX(pm.to);
+      var vis = visLoc[from] != null ? visLoc[from] : from;
+      v.board[to] = v.board[from];
+      v.board[from] = null;
+      delete visLoc[from];
+      visLoc[to] = vis;
+      v.vpos[vis] = to;
+    });
+    return v;
+  };
+
   /* ============ construction ============ */
   App.buildSquares = function () {
     var layer = App.$('#sq-layer');
@@ -171,17 +188,17 @@
       }
     }
 
-    /* premove */
-    if (S.premove) {
-      [S.premove.from, S.premove.to].forEach(function (sqI) {
-        var pp = App.displayXY(sqI);
+    /* premoves en file */
+    S.premove.forEach(function (pm) {
+      [pm.from, pm.to].forEach(function (sq) {
+        var pp = App.displayXY(Chess.SQUARE_INDEX(sq));
         var d = document.createElement('div');
         d.className = 'hl pre';
         d.style.left = pp.x * 12.5 + '%';
         d.style.top = pp.y * 12.5 + '%';
         hl.appendChild(d);
       });
-    }
+    });
 
     /* roi en échec */
     var dg = App.displayGame();
@@ -320,6 +337,7 @@
   /* ============ sélection ============ */
   App.deselect = function () {
     S.selected = -1;
+    S.pmFrom = -1;
     S.legalFrom = [];
     App.renderHighlights();
   };
@@ -417,10 +435,56 @@
     App.closePromo();
     App.hideConfirm();
     App.clearMarks();
-    if (S.premove) { S.premove = null; App.renderHighlights(); }
 
     var i = App.squareFromEvent(e);
     if (i < 0) return;
+
+    /* tour adverse : premoves (clic-clic ou drag, chaînables) */
+    if (App.isPremoveTurn()) {
+      var v = App.pmVirtual();
+      /* clic sur l'arrivée d'un premove en file -> annule la fin de la file */
+      if (S.pmFrom < 0) {
+        for (var k = 0; k < S.premove.length; k++) {
+          if (Chess.SQUARE_INDEX(S.premove[k].to) === i) {
+            S.premove.length = k;
+            App.renderHighlights();
+            return;
+          }
+        }
+      }
+      var vf = v.vpos[i] != null ? v.vpos[i] : i;
+      var vp = v.board[vf];
+      if (vp && vp.color === S.playerColor) {
+        S.selected = i;
+        S.pmFrom = vf;
+        S.legalFrom = [];
+        Sound.select();
+        App.renderHighlights();
+        var el = S.pieceEls[i];
+        var rect = App.$('#board').getBoundingClientRect();
+        S.drag = {
+          el: el, from: i, pmFrom: vf, moved: false,
+          startX: e.clientX, startY: e.clientY,
+          ox: e.clientX - rect.left, oy: e.clientY - rect.top,
+          premove: true
+        };
+        el.classList.add('dragging');
+        App.$('#board').setPointerCapture(e.pointerId);
+        return;
+      }
+      /* case cible : ajoute le premove à la file */
+      if (S.pmFrom >= 0 && i !== S.pmFrom &&
+          !(v.board[i] && v.board[i].color === S.playerColor)) {
+        S.premove.push({ from: App.sqName(S.pmFrom), to: App.sqName(i) });
+        Sound.select();
+      }
+      App.deselect();
+      return;
+    }
+
+    /* hors tour adverse : toute file de premoves restante est annulée */
+    if (S.premove.length) { S.premove = []; App.renderHighlights(); }
+
     var p = pieceAt(i);
 
     /* destination d'un coup déjà sélectionné */
@@ -489,12 +553,16 @@
 
     var to = App.squareFromEvent(e);
     if (d.moved && to >= 0 && to !== d.from) {
-      /* premove : enregistré, exécuté au tour du joueur si légal */
+      /* premove : ajouté à la file, exécuté au tour du joueur si légal */
       if (d.premove) {
-        S.premove = { from: d.from, to: to };
+        var v2 = App.pmVirtual();
+        if (!(v2.board[to] && v2.board[to].color === S.playerColor)) {
+          S.premove.push({ from: App.sqName(d.pmFrom), to: App.sqName(to) });
+          Sound.select();
+        }
         S.selected = -1;
+        S.pmFrom = -1;
         App.renderHighlights();
-        Sound.select();
         App.setPiecePos(d.el, parseInt(d.el.dataset.sq, 10), false);
         return;
       }

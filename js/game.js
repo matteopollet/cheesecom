@@ -100,19 +100,19 @@
     App.deselect();
   };
 
-  /* exécute le premove si légal */
+  /* exécute le prochain premove de la file si légal */
   App.runPremove = function () {
-    var pm = S.premove;
-    S.premove = null;
+    var pm = S.premove.shift();
     if (!pm) return;
-    var legal = S.game.legalMoves(App.sqName(pm.from));
+    var legal = S.game.legalMoves(pm.from);
     var ok = legal.some(function (m) {
       return m.to === pm.to && (!m.promotion || m.promotion === 'q');
     });
     if (ok) {
-      var mv = S.game.move({ from: App.sqName(pm.from), to: App.sqName(pm.to), promotion: 'q' });
+      var mv = S.game.move({ from: pm.from, to: pm.to, promotion: 'q' });
       if (mv) { App.afterMove(mv, 'player'); return; }
     }
+    /* illégal : celui-ci est jeté, le reste de la file est conservé */
     Sound.illegal();
     App.renderHighlights();
   };
@@ -129,7 +129,7 @@
 
     var h = S.game.history;
     S.lastMove = h.length ? { from: h[h.length - 1].from, to: h[h.length - 1].to } : null;
-    S.premove = null;
+    S.premove = [];
     S.viewGame = null; S.viewPly = null;
     S.varBase = null; S.varMoves = []; S.varPly = 0;
     App.hideConfirm();
@@ -176,7 +176,7 @@
       S.viewPly = n;
       S.viewGame = App.buildViewGame();
     }
-    S.premove = null;
+    S.premove = [];
     App.hideConfirm();
     App.closePromo();
     S.selected = -1; S.legalFrom = [];
@@ -269,7 +269,7 @@
     App.checkGameEnd();
     if (S.active && S.game.turn !== S.playerColor) {
       App.scheduleBotMove();
-    } else if (S.active && S.premove) {
+    } else if (S.active && S.premove.length) {
       App.runPremove();
     }
   };
@@ -319,7 +319,7 @@
     if (!S.active) return;
     S.active = false;
     S.inputLocked = true;
-    S.premove = null;
+    S.premove = [];
     App.hideConfirm();
     App.stopClocks();
     App.botThink(false);
@@ -359,7 +359,7 @@
     S.userArrows = [];
     S.hintArrow = null;
     S.msgCount = 0;
-    S.premove = null;
+    S.premove = [];
     S.pendingConfirm = null;
     S.viewGame = null; S.viewPly = null;
     S.varBase = null; S.varMoves = []; S.varPly = 0;
@@ -391,7 +391,7 @@
     S.active = false;
     App.stopClocks();
     App.botThink(false);
-    S.premove = null;
+    S.premove = [];
     S.viewGame = null; S.viewPly = null;
     S.varBase = null; S.varMoves = []; S.varPly = 0;
     S.review = null;
