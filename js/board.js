@@ -553,13 +553,12 @@
 
     var to = App.squareFromEvent(e);
     if (d.moved && to >= 0 && to !== d.from) {
-      /* premove : ajouté à la file, exécuté au tour du joueur si légal */
+      /* premove : ajouté à la file, exécuté au tour du joueur si légal.
+         Une case occupée par une de nos pièces est une cible valide
+         (contre-prise : elle aura été capturée avant l'exécution). */
       if (d.premove) {
-        var v2 = App.pmVirtual();
-        if (!(v2.board[to] && v2.board[to].color === S.playerColor)) {
-          S.premove.push({ from: App.sqName(d.pmFrom), to: App.sqName(to) });
-          Sound.select();
-        }
+        S.premove.push({ from: App.sqName(d.pmFrom), to: App.sqName(to) });
+        Sound.select();
         S.selected = -1;
         S.pmFrom = -1;
         App.renderHighlights();
