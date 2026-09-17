@@ -121,6 +121,11 @@
   /* ============ retour en arrière ============ */
   App.takeback = function () {
     if (!S.game || !S.game.history.length) { App.toast('Rien à annuler'); return; }
+    if (S.online) {
+      if (App.Net) App.Net.send('ct', { k: 'tb' });
+      App.sysSay('Retour en arrière demandé…');
+      return;
+    }
     if (S.inputLocked) { App.toast('Attends le coup du robot'); return; }
     var undone = 0;
     do {
@@ -258,17 +263,24 @@
     if (mv.san.indexOf('+') >= 0) setTimeout(function () { Sound.check(); }, 140);
 
     /* réactions du bot */
-    if (who === 'player') {
-      if (mv.captured && Math.random() < 0.5) App.botSay(line('userCapture'));
-      else if (mv.san.indexOf('+') >= 0 && Math.random() < 0.6) App.botSay(line('userCheck'));
-    } else {
-      if (mv.captured && Math.random() < 0.4) App.botSay(line('botCapture'));
-      else if (mv.san.indexOf('+') >= 0) App.botSay(line('botCheck'));
+    if (!S.online) {
+      if (who === 'player') {
+        if (mv.captured && Math.random() < 0.5) App.botSay(line('userCapture'));
+        else if (mv.san.indexOf('+') >= 0 && Math.random() < 0.6) App.botSay(line('userCheck'));
+      } else {
+        if (mv.captured && Math.random() < 0.4) App.botSay(line('botCapture'));
+        else if (mv.san.indexOf('+') >= 0) App.botSay(line('botCheck'));
+      }
+    }
+
+    /* en ligne : transmettre mon coup à l'adversaire */
+    if (who === 'player' && S.online && App.Net) {
+      App.Net.send('mv', { f: mv.from, t: mv.to, p: mv.promotion || null });
     }
 
     App.updateEval();
     App.checkGameEnd();
-    if (S.active && S.game.turn !== S.playerColor) {
+    if (S.active && !S.online && S.game.turn !== S.playerColor) {
       App.scheduleBotMove();
     } else if (S.active && S.premove.length) {
       App.runPremove();
@@ -338,9 +350,215 @@
     $('#overlay-sub').textContent = reason;
     $('#board-overlay').classList.remove('hidden');
 
-    if (outcome === 'win') { Sound.win(); setTimeout(function () { App.botSay(line('lose')); }, 800); App.addRewards(50); }
-    else if (outcome === 'lose') { Sound.lose(); setTimeout(function () { App.botSay(line('win')); }, 800); App.addRewards(15); }
-    else { Sound.draw(); setTimeout(function () { App.botSay(line('drawOk')); }, 800); App.addRewards(25); }
+    if (outcome === 'win') { Sound.win(); if (!S.online) { setTimeout(function () { App.botSay(line('lose')); }, 800); App.addRewards(50); } }
+    else if (outcome === 'lose') { Sound.lose(); if (!S.online) { setTimeout(function () { App.botSay(line('win')); }, 800); App.addRewards(15); } }
+    else { Sound.draw(); if (!S.online) { setTimeout(function () { App.botSay(line('drawOk')); }, 800); App.addRewards(25); } }
+  };
+
+  /* ============ partie en ligne (WebRTC, room par code) ============ */
+  /* ouvre une room ; isHost détermine qui attribue les couleurs */
+  App.openRoom = function (code, isHost, name) {
+    if (!App.Net) { App.toast('Module réseau non chargé'); return false; }
+    S.online = {
+      code: code, isHost: isHost, myName: name || App.USER.name,
+      peerName: 'Adversaire', peerId: null, myColor: 'w', rematchPending: false
+    };
+    App.Net.open(code, {
+      join: function (peerId) {
+        var o = S.online;
+        if (!o || o.code !== code) return;
+        o.peerId = peerId;
+        App.Net.send('hi', { n: o.myName });
+        if (o.isHost) {
+          o.myColor = Math.random() < 0.5 ? 'w' : 'b';
+          App.Net.send('st', { h: o.myColor, tc: S.timeControl });
+          App.startOnlineGame();
+        }
+        /* l'invité attend le message 'st' pour démarrer */
+      },
+      leave: function () {
+        var o = S.online;
+        if (!o || o.code !== code) return;
+        if (S.active) {
+          App.endGame(S.playerColor === 'w' ? '1-0' : '0-1', 'adversaire déconnecté', 'win');
+        } else {
+          App.toast('Adversaire déconnecté');
+          App.backToSelect();
+        }
+      },
+      msg: App.onNetMsg
+    });
+    return true;
+  };
+
+  /* avatar/pseudo de l'adversaire réutilisés partout via S.bot */
+  function peerAsBot() {
+    var o = S.online;
+    S.bot = {
+      name: o.peerName,
+      avatar: CheeseBots.avatarSVG({ id: 'peer-' + (o.peerId || 'x'), robot: false }, 80),
+      flag: 'CHEESE', rating: 0
+    };
+  }
+
+  App.startOnlineGame = function () {
+    var o = S.online;
+    App.closePromo();
+    S.playerColor = o.myColor;
+    S.flipped = o.myColor === 'b';
+    S.game = new Chess();
+    S.active = true;
+    S.inputLocked = false;
+    S.selected = -1; S.pmFrom = -1;
+    S.legalFrom = [];
+    S.lastMove = null;
+    S.userMarks = {}; S.userArrows = [];
+    S.hintArrow = null;
+    S.msgCount = 0;
+    S.premove = [];
+    S.pendingConfirm = null;
+    S.viewGame = null; S.viewPly = null;
+    S.varBase = null; S.varMoves = []; S.varPly = 0; S.varReply = null;
+    S.review = null;
+    o.rematchPending = false;
+    peerAsBot();
+    App.hideConfirm();
+
+    $('#board-overlay').classList.add('hidden');
+    $('#panel-select').classList.add('hidden');
+    $('#panel-analysis').classList.add('hidden');
+    $('#panel-game').classList.remove('hidden');
+    $('#chat-area').innerHTML = '';
+    $('#chat-in-row').classList.remove('hidden');
+    $('#game-vs').textContent = o.peerName + ' vs ' + o.myName;
+
+    App.buildSquares();
+    App.renderCards();
+    App.renderMoves();
+    App.renderCaptured();
+    App.renderClocks();
+    App.updateEval();
+    App.startClocks();
+    Sound.start();
+    App.sysSay('Partie en ligne — tu joues les ' + (o.myColor === 'w' ? 'blancs' : 'noirs'));
+  };
+
+  /* annule le dernier demi-coup (takeback accepté) — identique des deux côtés */
+  App.doTakeback = function () {
+    if (!S.game || !S.game.history.length) return;
+    S.game.undo();
+    var h = S.game.history;
+    S.lastMove = h.length ? { from: h[h.length - 1].from, to: h[h.length - 1].to } : null;
+    S.premove = [];
+    S.viewGame = null; S.viewPly = null;
+    App.hideConfirm();
+    App.closePromo();
+    App.deselect();
+    App.renderPieces();
+    App.renderMoves();
+    App.renderCaptured();
+    App.renderClocks();
+    App.renderHighlights();
+    App.updateEval();
+  };
+
+  /* bulle chat avec boutons accepter / décliner */
+  App.peerAsk = function (text, okKind, noKind, onOk) {
+    var area = $('#chat-area');
+    var div = document.createElement('div');
+    div.className = 'chat-msg';
+    var okB = document.createElement('button');
+    okB.className = 'btn mini green'; okB.textContent = '✓';
+    var noB = document.createElement('button');
+    noB.className = 'btn mini danger'; noB.textContent = '✗';
+    div.innerHTML = '<span class="cm-ava">' + S.bot.avatar + '</span>' +
+      '<span class="cm-bubble"><span class="cm-name">' + App.escapeHtml(S.bot.name) + '</span><br>' +
+      App.escapeHtml(text) + ' </span>';
+    div.querySelector('.cm-bubble').appendChild(okB);
+    div.querySelector('.cm-bubble').appendChild(noB);
+    okB.onclick = function () { App.Net.send('ct', { k: okKind }); if (onOk) onOk(); div.remove(); };
+    noB.onclick = function () { App.Net.send('ct', { k: noKind }); div.remove(); };
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+    Sound.chat();
+  };
+
+  /* messages réseau entrants */
+  App.onNetMsg = function (t, d, peerId) {
+    var o = S.online;
+    if (!o) return;
+    if (t === 'hi') {
+      o.peerName = d.n || 'Adversaire';
+      if (S.active) { peerAsBot(); App.renderCards(); }
+      $('#game-vs').textContent = o.peerName + ' vs ' + o.myName;
+      return;
+    }
+    if (t === 'st') {
+      o.myColor = d.h === 'w' ? 'b' : 'w';
+      S.timeControl = d.tc || 'casual';
+      App.startOnlineGame();
+      return;
+    }
+    if (t === 'mv') {
+      if (!S.active) return;
+      var mv = S.game.move({ from: d.f, to: d.t, promotion: d.p || undefined });
+      if (mv) App.afterMove(mv, 'peer');
+      return;
+    }
+    if (t !== 'ct') return;
+    switch (d.k) {
+      case 'resign':
+        App.endGame(S.playerColor === 'w' ? '1-0' : '0-1', 'par abandon', 'win');
+        break;
+      case 'draw':
+        App.peerAsk('propose la nulle', 'drawOk', 'drawNo', function () {
+          App.endGame('½-½', 'par accord mutuel', 'draw');
+        });
+        break;
+      case 'drawOk':
+        App.endGame('½-½', 'par accord mutuel', 'draw');
+        break;
+      case 'drawNo':
+        App.sysSay(o.peerName + ' a décliné la nulle');
+        break;
+      case 'tb':
+        App.peerAsk('demande un retour en arrière', 'tbOk', 'tbNo', function () {
+          App.doTakeback();
+        });
+        break;
+      case 'tbOk':
+        App.doTakeback();
+        App.sysSay(o.peerName + ' a accepté le retour');
+        break;
+      case 'tbNo':
+        App.sysSay(o.peerName + ' a décliné le retour');
+        break;
+      case 'rematch':
+        /* acceptation automatique : on échange les couleurs des deux côtés */
+        if (!o.rematchPending) App.Net.send('ct', { k: 'rematch' });
+        o.rematchPending = false;
+        App.swapOnlineGame();
+        break;
+      case 'flag':
+        App.endGame(d.c === 'w' ? '0-1' : '1-0', 'au temps',
+          d.c === S.playerColor ? 'lose' : 'win');
+        break;
+      case 'chat':
+        if (d.m) App.botSay(String(d.m).slice(0, 140));
+        break;
+    }
+  };
+
+  App.onlineRematch = function () {
+    if (!S.online || !S.online.code) return;
+    S.online.rematchPending = true;
+    if (App.Net) App.Net.send('ct', { k: 'rematch' });
+    App.toast('Proposition de revanche envoyée…');
+  };
+
+  App.swapOnlineGame = function () {
+    S.online.myColor = S.online.myColor === 'w' ? 'b' : 'w';
+    App.startOnlineGame();
   };
 
   /* ============ démarrage / retour ============ */
@@ -372,6 +590,7 @@
     $('#panel-analysis').classList.add('hidden');
     $('#panel-game').classList.remove('hidden');
     $('#chat-area').innerHTML = '';
+    $('#chat-in-row').classList.add('hidden');
     $('#game-vs').textContent = S.bot.name + ' (' + S.bot.rating + ') vs ' + App.USER.name;
 
     App.buildSquares();
@@ -392,6 +611,7 @@
     S.active = false;
     App.stopClocks();
     App.botThink(false);
+    if (S.online) { if (App.Net) App.Net.leave(); S.online = null; }
     S.premove = [];
     S.viewGame = null; S.viewPly = null;
     S.varBase = null; S.varMoves = []; S.varPly = 0;
@@ -402,6 +622,8 @@
     $('#panel-game').classList.add('hidden');
     $('#panel-analysis').classList.add('hidden');
     $('#panel-select').classList.remove('hidden');
+    $('#chat-in-row').classList.add('hidden');
+    $('#ol-wait').classList.add('hidden');
     App.closePromo();
     App.deselect();
   };
@@ -456,12 +678,18 @@
     $('#resign-modal').classList.add('hidden');
     if (!S.active) return;
     var res = S.playerColor === 'w' ? '0-1' : '1-0';
-    App.botSay(line('resign'));
+    if (S.online && App.Net) App.Net.send('ct', { k: 'resign' });
+    if (!S.online) App.botSay(line('resign'));
     App.endGame(res, 'par abandon', 'lose');
   };
 
   App.offerDraw = function () {
     if (!S.active) return;
+    if (S.online) {
+      if (App.Net) App.Net.send('ct', { k: 'draw' });
+      App.sysSay('Nulle proposée…');
+      return;
+    }
     var g = S.game;
     var evalNow = CheeseAI.evaluate(g, S.bot.aggression); /* du point de vue du trait */
     var botToMove = g.turn !== S.playerColor;
@@ -484,6 +712,7 @@
   };
 
   App.hint = function () {
+    if (S.online) { App.toast('Pas d\'indice en ligne'); return; }
     if (!S.active || S.game.turn !== S.playerColor) return;
     var fen = S.game.fen();
     App.aiMove(fen, 2100, 0, function (mv) {

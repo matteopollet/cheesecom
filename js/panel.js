@@ -139,6 +139,7 @@
       App.renderClocks();
       if (S.clocks[S.game.turn] <= 0) {
         var loser = S.game.turn;
+        if (S.online && App.Net) App.Net.send('ct', { k: 'flag', c: loser });
         App.endGame(loser === 'w' ? '0-1' : '1-0', 'au temps', loser !== S.playerColor ? 'win' : 'lose');
       }
     }, 200);
@@ -159,6 +160,26 @@
     area.scrollTop = area.scrollHeight;
     Sound.chat();
     S.msgCount++;
+  };
+
+  /* message système centré (partie en ligne) */
+  App.sysSay = function (text) {
+    var area = $('#chat-area');
+    var div = document.createElement('div');
+    div.className = 'chat-msg sys';
+    div.innerHTML = '<span class="cm-bubble">' + escapeHtml(text) + '</span>';
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+  };
+
+  /* bulle de chat de l'utilisateur (alignée à droite) */
+  App.userSay = function (text) {
+    var area = $('#chat-area');
+    var div = document.createElement('div');
+    div.className = 'chat-msg mine';
+    div.innerHTML = '<span class="cm-bubble">' + escapeHtml(text) + '</span>';
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
   };
 
   App.botThink = function (show) {

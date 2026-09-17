@@ -41,6 +41,7 @@
       varMoves: [],           /* coups joués dans la variante */
       varPly: 0,              /* coups de la variante actuellement rejoués */
       varReply: null,         /* meilleure réponse du moteur (flèche verte) */
+      online: null,           /* {code, isHost, myName, peerName, peerId, myColor, rematchPending} */
       prefs: null
     },
     selectedBot: null,      /* défini dans app.js au démarrage */

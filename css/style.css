@@ -959,3 +959,40 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 /* icônes de pièces dans la liste des coups */
 .mv-pc { width: 15px; height: 15px; margin-right: 2px; vertical-align: -2px; }
 .mv { display: inline-flex; align-items: center; }
+
+/* ---------- jeu en ligne ---------- */
+#online-box {
+  margin-top: 8px; padding: 10px;
+  background: #262421; border-radius: 10px;
+  border: 1px solid #3a3733;
+}
+.ol-in {
+  width: 100%; box-sizing: border-box;
+  background: #1c1a17; border: 1px solid #3a3733; border-radius: 6px;
+  color: var(--text); padding: 8px 10px; font-size: 14px;
+}
+.ol-in:focus { outline: none; border-color: var(--green); }
+.ol-btn { width: 100%; margin-top: 8px; padding: 9px; }
+.ol-join-row { display: flex; gap: 6px; margin-top: 8px; }
+.ol-join-row .ol-in { flex: 1; text-transform: uppercase; letter-spacing: 2px; }
+.ol-code-big {
+  font-size: 30px; font-weight: 800; letter-spacing: 8px;
+  text-align: center; color: #f5c542; margin: 10px 0 4px;
+  font-family: monospace;
+}
+.ol-status { text-align: center; color: var(--muted-2, #b0aca4); font-size: 13px; margin: 8px 0 2px; }
+
+/* chat en ligne */
+#chat-in-row { padding: 6px 8px; border-top: 1px solid #3a3733; }
+#chat-in {
+  width: 100%; box-sizing: border-box;
+  background: #1c1a17; border: 1px solid #3a3733; border-radius: 6px;
+  color: var(--text); padding: 6px 9px; font-size: 13px;
+}
+#chat-in:focus { outline: none; border-color: var(--green); }
+.chat-msg.sys .cm-bubble {
+  background: transparent; color: var(--muted-2, #b0aca4);
+  font-style: italic; font-size: 12px; text-align: center; width: 100%;
+  box-shadow: none; padding: 2px 4px;
+}
+.btn.mini { padding: 2px 9px; margin-left: 6px; font-size: 13px; border-radius: 6px; }

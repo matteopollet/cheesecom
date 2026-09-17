@@ -42,7 +42,56 @@
     board.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
     /* panneau sélection */
-    $('#btn-play').onclick = function () { S.bot = App.selectedBot; App.startGame(); };
+    $('#btn-play').onclick = function () { S.bot = App.selectedBot; S.online = null; App.startGame(); };
+
+    /* ---------- jeu en ligne (rooms par code) ---------- */
+    $('#ol-name').value = App.USER.name;
+    $('#btn-online').onclick = function () { $('#online-box').classList.toggle('hidden'); };
+    function makeCode() {
+      var chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+      var c = '';
+      for (var i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
+      return c;
+    }
+    $('#ol-create').onclick = function () {
+      if (!App.Net) { App.toast('Réseau indisponible (connexion requise)'); return; }
+      var code = makeCode();
+      if (!App.openRoom(code, true, $('#ol-name').value.trim())) return;
+      $('#ol-code-big').textContent = code;
+      $('#ol-status').textContent = 'En attente d\'un adversaire…';
+      $('#ol-wait').classList.remove('hidden');
+    };
+    $('#ol-join').onclick = function () {
+      var code = $('#ol-code').value.trim().toUpperCase();
+      if (code.length < 4) { App.toast('Entre le code de la room'); return; }
+      if (!App.Net) { App.toast('Réseau indisponible (connexion requise)'); return; }
+      if (!App.openRoom(code, false, $('#ol-name').value.trim())) return;
+      $('#ol-code-big').textContent = code;
+      $('#ol-status').textContent = 'Connexion…';
+      $('#ol-wait').classList.remove('hidden');
+    };
+    $('#ol-code').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') $('#ol-join').click();
+    });
+    $('#ol-copy').onclick = function () {
+      var code = $('#ol-code-big').textContent;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(function () { App.toast('Code copié !'); });
+      } else App.toast(code);
+    };
+    $('#ol-cancel').onclick = function () {
+      if (App.Net) App.Net.leave();
+      S.online = null;
+      $('#ol-wait').classList.add('hidden');
+    };
+    $('#chat-in').addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      var m = this.value.trim();
+      this.value = '';
+      if (!m || !S.online || !App.Net) return;
+      App.Net.send('ct', { k: 'chat', m: m });
+      App.userSay(m);
+    });
     $('#options-row').onclick = function () {
       $('#options-row').classList.toggle('open');
       $('#options-body').classList.toggle('hidden');
@@ -116,7 +165,9 @@
     $('#btn-quit').onclick = App.backToSelect;
     $('#cfm-ok').onclick = function (e) { e.stopPropagation(); App.confirmPending(); };
     $('#cfm-no').onclick = function (e) { e.stopPropagation(); App.cancelConfirm(); };
-    $('#btn-rematch').onclick = App.startGame;
+    $('#btn-rematch').onclick = function () {
+      if (S.online) App.onlineRematch(); else App.startGame();
+    };
     $('#btn-newbot').onclick = App.backToSelect;
     $('#overlay-close').onclick = function () { $('#board-overlay').classList.add('hidden'); };
     $('#resign-ok').onclick = App.confirmResign;

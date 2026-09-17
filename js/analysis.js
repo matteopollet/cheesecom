@@ -90,6 +90,7 @@
     $('#board-overlay').classList.add('hidden');
     $('#panel-select').classList.add('hidden');
     $('#panel-game').classList.add('hidden');
+    $('#chat-in-row').classList.add('hidden');
     $('#panel-analysis').classList.remove('hidden');
     showView(S.review ? 'sum' : 'input');
   };
